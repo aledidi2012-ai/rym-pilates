@@ -456,14 +456,11 @@ function Landing({ onEnter }) {
           <img
             src="/logo.png"
             alt="RYM Pilates"
-            style={{ width: 64, height: 64, borderRadius: 16, boxShadow: SHADOW_MD, marginBottom: 24, objectFit: "cover" }}
+            style={{ width: 140, height: 140, borderRadius: 28, boxShadow: SHADOW_MD, marginBottom: 26, objectFit: "cover" }}
           />
           <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: MOSS_DARK, margin: "0 0 18px" }}>
             Estudio de Reformer Pilates
           </p>
-          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(40px, 7vw, 72px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: -1, margin: "0 0 22px", maxWidth: 640 }}>
-            RYM Pilates
-          </h1>
           <p style={{ fontSize: 17, color: MUTE, maxWidth: 460, lineHeight: 1.6, margin: "0 0 34px" }}>
             Movimiento consciente, control y respiración sobre la cama de reformer. Clases reducidas, seguimiento personalizado.
           </p>

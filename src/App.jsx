@@ -23,8 +23,8 @@ const FONT_BODY = "'Manrope', -apple-system, Helvetica, Arial, sans-serif";
 
 // ---- DATOS DEL ESTUDIO: editá estas 3 líneas cuando quieras ----
 const STUDIO_ADDRESS = "Tu dirección acá (ej. Av. Siempre Viva 123, Quilmes)";
-const STUDIO_WHATSAPP = "https://wa.me/5491100000000"; // reemplazá el número
-const STUDIO_INSTAGRAM = "https://instagram.com/rympilates"; // reemplazá el usuario
+const STUDIO_WHATSAPP = "https://wa.me/5491161626800";
+const STUDIO_INSTAGRAM = "https://instagram.com/rympilates";
 // ------------------------------------------------------------------
 
 async function sb(path, options = {}) {

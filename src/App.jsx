@@ -295,6 +295,68 @@ function AdminView({ clases, alumnos, reload }) {
   );
 }
 
+function AdminLogin({ onClose, onLoggedIn }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const submit = async () => {
+    if (!email || !password) {
+      setErr("Completá email y contraseña.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErr("Email o contraseña incorrectos.");
+        setBusy(false);
+        return;
+      }
+      onLoggedIn(data.access_token);
+      onClose();
+    } catch (e) {
+      setErr("No se pudo conectar.");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#00000066", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20 }}>
+      <div style={{ background: STONE, width: 300, borderRadius: 16, padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h3 style={{ fontFamily: "Georgia, serif", fontWeight: 400, fontSize: 18, margin: 0, color: INK }}>Acceso del estudio</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ width: "100%", padding: 10, marginBottom: 8, borderRadius: 8, border: `1px solid ${MUTE}66`, fontSize: 14, boxSizing: "border-box" }}
+        />
+        <input
+          placeholder="Contraseña"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{ width: "100%", padding: 10, marginBottom: 10, borderRadius: 8, border: `1px solid ${MUTE}66`, fontSize: 14, boxSizing: "border-box" }}
+        />
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 8px" }}>{err}</p>}
+        <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "12px 0", borderRadius: 8, border: "none", background: MOSS, color: STONE, fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+          {busy ? "Entrando..." : "Ingresar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function NavBar({ mode }) {
   const clientTabs = [[Calendar, "Clases"], [Clock, "Reservas"]];
   const adminTabs = [[LayoutGrid, "Gestion"], [Users, "Alumnos"]];
@@ -317,6 +379,8 @@ export default function App() {
   const [alumnos, setAlumnos] = useState(null);
   const [alumnoDemo, setAlumnoDemo] = useState(null);
   const [error, setError] = useState("");
+  const [showLogin, setShowLogin] = useState(false);
+  const [adminToken, setAdminToken] = useState(null);
 
   const cargarTodo = useCallback(async () => {
     try {
@@ -349,13 +413,24 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "24px 0", fontFamily: "-apple-system, Helvetica, Arial, sans-serif" }}>
-      <div style={{ display: "flex", gap: 8 }}>
-        {[["cliente", "Vista cliente"], ["admin", "Panel admin"]].map(([key, label]) => (
-          <button key={key} onClick={() => setMode(key)} style={{ padding: "7px 16px", borderRadius: 20, border: `1px solid ${INK}33`, background: mode === key ? INK : "transparent", color: mode === key ? STONE : INK, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-            {label}
+      {adminToken && (
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["cliente", "Vista cliente"], ["admin", "Panel admin"]].map(([key, label]) => (
+            <button key={key} onClick={() => setMode(key)} style={{ padding: "7px 16px", borderRadius: 20, border: `1px solid ${INK}33`, background: mode === key ? INK : "transparent", color: mode === key ? STONE : INK, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+              {label}
+            </button>
+          ))}
+          <button
+            onClick={() => {
+              setAdminToken(null);
+              setMode("cliente");
+            }}
+            style={{ padding: "7px 16px", borderRadius: 20, border: `1px solid ${CLAY}66`, background: "transparent", color: CLAY, fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+          >
+            Cerrar sesión
           </button>
-        ))}
-      </div>
+        </div>
+      )}
 
       {error && mode === "admin" && (
         <div style={{ maxWidth: 320, padding: "8px 14px", borderRadius: 8, background: "#F0DCD2", color: "#7A2E14", fontSize: 12.5 }}>{error}</div>
@@ -364,15 +439,34 @@ export default function App() {
       <div style={{ width: 340, height: 660, borderRadius: 34, border: `8px solid ${INK}`, background: STONE, overflow: "hidden", position: "relative", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }}>
         <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
-            {mode === "cliente" ? (
-              <ClientView clases={clases} alumnoDemo={alumnoDemo} reload={cargarTodo} error={mode === "cliente" ? error : ""} />
-            ) : (
+            {mode === "admin" && adminToken ? (
               <AdminView clases={clases} alumnos={alumnos} reload={cargarTodo} />
+            ) : (
+              <ClientView clases={clases} alumnoDemo={alumnoDemo} reload={cargarTodo} error={error} />
             )}
           </div>
-          <NavBar mode={mode} />
+          <NavBar mode={adminToken ? mode : "cliente"} />
         </div>
       </div>
+
+      {!adminToken && (
+        <button
+          onClick={() => setShowLogin(true)}
+          style={{ background: "none", border: "none", color: MUTE, fontSize: 11, cursor: "pointer", padding: 6 }}
+        >
+          Acceso del estudio
+        </button>
+      )}
+
+      {showLogin && (
+        <AdminLogin
+          onClose={() => setShowLogin(false)}
+          onLoggedIn={(token) => {
+            setAdminToken(token);
+            setMode("admin");
+          }}
+        />
+      )}
     </div>
   );
 }

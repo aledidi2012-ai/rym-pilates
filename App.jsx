@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Calendar, Users, LayoutGrid, Clock, ChevronLeft, Plus, X, Check } from "lucide-react";
+import { Calendar, Users, LayoutGrid, Clock, ChevronLeft, Plus, X, Check, Instagram, MessageCircle, MapPin, ArrowRight } from "lucide-react";
 
 const SUPABASE_URL = "https://hkcbwsrsemppvyidwhlt.supabase.co";
 const SUPABASE_KEY = "sb_publishable_RRAMcqXuHdFstAgi_LKaMQ_FAF9uFMc";
@@ -20,6 +20,12 @@ const SHADOW_LG = "0 20px 48px rgba(28,27,25,0.22)";
 
 const FONT_DISPLAY = "'Fraunces', Georgia, serif";
 const FONT_BODY = "'Manrope', -apple-system, Helvetica, Arial, sans-serif";
+
+// ---- DATOS DEL ESTUDIO: editá estas 3 líneas cuando quieras ----
+const STUDIO_ADDRESS = "Tu dirección acá (ej. Av. Siempre Viva 123, Quilmes)";
+const STUDIO_WHATSAPP = "https://wa.me/5491100000000"; // reemplazá el número
+const STUDIO_INSTAGRAM = "https://instagram.com/rympilates"; // reemplazá el usuario
+// ------------------------------------------------------------------
 
 async function sb(path, options = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -432,6 +438,99 @@ function NavBar({ mode }) {
   );
 }
 
+function Landing({ onEnter }) {
+  const pill = { display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 30, fontSize: 13.5, fontWeight: 600, fontFamily: FONT_BODY, textDecoration: "none", cursor: "pointer" };
+
+  return (
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: FONT_BODY, color: INK }}>
+      {/* Hero */}
+      <div
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          padding: "60px 24px 90px",
+          background: `radial-gradient(circle at 15% 20%, ${MOSS}22, transparent 55%), radial-gradient(circle at 85% 0%, ${CLAY}22, transparent 45%)`,
+        }}
+      >
+        <div style={{ maxWidth: 880, margin: "0 auto" }}>
+          <img
+            src="/logo.png"
+            alt="RYM Pilates"
+            style={{ width: 64, height: 64, borderRadius: 16, boxShadow: SHADOW_MD, marginBottom: 24, objectFit: "cover" }}
+          />
+          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: MOSS_DARK, margin: "0 0 18px" }}>
+            Estudio de Reformer Pilates
+          </p>
+          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(40px, 7vw, 72px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: -1, margin: "0 0 22px", maxWidth: 640 }}>
+            RYM Pilates
+          </h1>
+          <p style={{ fontSize: 17, color: MUTE, maxWidth: 460, lineHeight: 1.6, margin: "0 0 34px" }}>
+            Movimiento consciente, control y respiración sobre la cama de reformer. Clases reducidas, seguimiento personalizado.
+          </p>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              onClick={onEnter}
+              style={{ ...pill, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, boxShadow: SHADOW_MD }}
+            >
+              Reservar una clase <ArrowRight size={16} />
+            </button>
+            <a href={STUDIO_WHATSAPP} target="_blank" rel="noreferrer" style={{ ...pill, border: `1.5px solid ${INK}22`, background: "transparent", color: INK }}>
+              <MessageCircle size={16} /> WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Sobre el estudio */}
+      <div style={{ maxWidth: 880, margin: "0 auto", padding: "70px 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 36 }}>
+        {[
+          ["Grupos reducidos", "Máximo de alumnos por clase para que cada ejercicio se corrija en el momento."],
+          ["Nivel por alumno", "Progresás a tu ritmo: principiante, intermedio o avanzado, todo sobre la misma máquina."],
+          ["Reservá desde acá", "Elegís horario y cama de reformer disponible al instante, sin llamadas ni mensajes."],
+        ].map(([title, desc]) => (
+          <div key={title}>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 20, margin: "0 0 8px" }}>{title}</h3>
+            <p style={{ fontSize: 14, color: MUTE, lineHeight: 1.6, margin: 0 }}>{desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Ubicación + contacto */}
+      <div style={{ background: STONE, boxShadow: `inset 0 1px 0 ${INK}0f` }}>
+        <div style={{ maxWidth: 880, margin: "0 auto", padding: "60px 24px", display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between" }}>
+          <div style={{ maxWidth: 340 }}>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px" }}>Dónde estamos</h3>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", color: MUTE, fontSize: 14, lineHeight: 1.6 }}>
+              <MapPin size={17} color={CLAY} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>{STUDIO_ADDRESS}</span>
+            </div>
+          </div>
+          <div>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px" }}>Seguinos</h3>
+            <div style={{ display: "flex", gap: 10 }}>
+              <a href={STUDIO_INSTAGRAM} target="_blank" rel="noreferrer" style={{ ...pill, border: `1.5px solid ${INK}22`, background: "transparent", color: INK, padding: "9px 16px" }}>
+                <Instagram size={16} /> Instagram
+              </a>
+              <a href={STUDIO_WHATSAPP} target="_blank" rel="noreferrer" style={{ ...pill, border: `1.5px solid ${INK}22`, background: "transparent", color: INK, padding: "9px 16px" }}>
+                <MessageCircle size={16} /> WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA final */}
+      <div style={{ padding: "70px 24px", textAlign: "center" }}>
+        <h2 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 30, margin: "0 0 20px" }}>¿Lista para tu próxima clase?</h2>
+        <button onClick={onEnter} style={{ ...pill, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, boxShadow: SHADOW_MD, padding: "13px 26px", fontSize: 14.5 }}>
+          Ver horarios y reservar <ArrowRight size={16} />
+        </button>
+        <p style={{ marginTop: 40, fontSize: 12, color: MUTE }}>RYM Pilates</p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [mode, setMode] = useState("cliente");
   const [clases, setClases] = useState(null);
@@ -440,6 +539,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [showLogin, setShowLogin] = useState(false);
   const [adminToken, setAdminToken] = useState(null);
+  const [entered, setEntered] = useState(false);
 
   const cargarTodo = useCallback(async () => {
     try {
@@ -470,8 +570,19 @@ export default function App() {
     cargarTodo();
   }, [cargarTodo]);
 
+  if (!entered) {
+    return <Landing onEnter={() => setEntered(true)} />;
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "24px 0", fontFamily: FONT_BODY, background: "transparent" }}>
+      <button
+        onClick={() => setEntered(false)}
+        style={{ background: "none", border: "none", color: MUTE, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_BODY }}
+      >
+        <ChevronLeft size={14} /> Volver al inicio
+      </button>
+
       {adminToken && (
         <div style={{ display: "flex", gap: 8, background: STONE, padding: 5, borderRadius: 20, boxShadow: SHADOW_SM }}>
           {[["cliente", "Vista cliente"], ["admin", "Panel admin"]].map(([key, label]) => (

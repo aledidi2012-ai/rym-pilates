@@ -853,23 +853,23 @@ function NuevaClaseForm({ onClose, onCreated, token, alumnos, instructores }) {
                 <option key={d.valor} value={d.valor}>{d.nombre}</option>
               ))}
             </select>
-            <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
           </div>
         ) : (
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
-            <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
           </div>
         )}
 
         {recurrente && (
           <>
-            <input type="number" min="1" max="52" value={semanas} onChange={(e) => setSemanas(e.target.value)} style={{ ...inputStyle, marginBottom: 4 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} type="number" min="1" max="52" value={semanas} onChange={(e) => setSemanas(e.target.value)} style={{ ...inputStyle, marginBottom: 4 }} />
             <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>Cantidad de semanas a generar (se crea una clase por cada {DIAS_SEMANA.find((d) => d.valor === diaSemana)?.nombre.toLowerCase()}).</p>
           </>
         )}
 
-        <input type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
+        <input onKeyDown={(e) => e.key === "Enter" && submit()} type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
         <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>Máximo {MAX_CAMAS_REFORMER} camas disponibles en el estudio.</p>
 
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
@@ -946,13 +946,13 @@ function EditarClaseForm({ clase, onClose, onSaved, token }) {
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
         {["nombre", "instructor"].map((f) => (
-          <input key={f} placeholder={f === "nombre" ? "Nombre (ej. Reformer Nivel 1)" : "Instructor"} value={form[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} style={inputStyle} />
+          <input onKeyDown={(e) => e.key === "Enter" && guardar()} key={f} placeholder={f === "nombre" ? "Nombre (ej. Reformer Nivel 1)" : "Instructor"} value={form[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} style={inputStyle} />
         ))}
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
-          <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+          <input onKeyDown={(e) => e.key === "Enter" && guardar()} type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+          <input onKeyDown={(e) => e.key === "Enter" && guardar()} type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
         </div>
-        <input type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
+        <input onKeyDown={(e) => e.key === "Enter" && guardar()} type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
         <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>
           Máximo {MAX_CAMAS_REFORMER} camas · ya tiene {clase.cupos_ocupados} {clase.cupos_ocupados === 1 ? "reserva" : "reservas"} hecha{clase.cupos_ocupados === 1 ? "" : "s"}.
         </p>
@@ -1023,8 +1023,8 @@ function DarAccesoForm({ alumno, onClose, onDone, token }) {
           <p style={{ fontSize: 14, color: MOSS_DARK, margin: 0 }}>Listo, ya puede ingresar con ese email y contraseña.</p>
         ) : (
           <>
-            <input placeholder="Email del alumno" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
-            <input placeholder="Contraseña inicial" type="text" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Email del alumno" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Contraseña inicial" type="text" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
             <p style={{ fontSize: 11.5, color: MUTE, margin: "-4px 0 14px" }}>Pasásela vos al alumno — después la puede cambiar desde "Cambiar contraseña".</p>
             {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
             <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
@@ -1080,7 +1080,7 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
           <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Nuevo alumno</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
-        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
         <div style={{ marginBottom: 10 }}>
           <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de inicio en el estudio</label>
           <input
@@ -1093,16 +1093,16 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
             style={{ ...inputStyle, marginBottom: 0 }}
           />
         </div>
-        <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
-        <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && submit()} type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de pago</label>
-            <input type="date" value={form.fecha_pago} onChange={(e) => setForm({ ...form, fecha_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} type="date" value={form.fecha_pago} onChange={(e) => setForm({ ...form, fecha_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Vence</label>
-            <input type="date" value={form.fecha_vencimiento} onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} type="date" value={form.fecha_vencimiento} onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
           </div>
         </div>
         <textarea placeholder="Lesiones, contraindicaciones, embarazo, cirugías (opcional)" value={form.notas_salud} onChange={(e) => setForm({ ...form, notas_salud: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
@@ -1183,7 +1183,7 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
           <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Editar alumno</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
-        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && guardar()} placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
         <div style={{ marginBottom: 10 }}>
           <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de inicio en el estudio</label>
           <input
@@ -1196,16 +1196,16 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
             style={{ ...inputStyle, marginBottom: 0 }}
           />
         </div>
-        <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
-        <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && guardar()} placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && guardar()} type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de pago</label>
-            <input type="date" value={form.fecha_pago} onChange={(e) => setForm({ ...form, fecha_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && guardar()} type="date" value={form.fecha_pago} onChange={(e) => setForm({ ...form, fecha_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Vence</label>
-            <input type="date" value={form.fecha_vencimiento} onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+            <input onKeyDown={(e) => e.key === "Enter" && guardar()} type="date" value={form.fecha_vencimiento} onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
           </div>
         </div>
         <textarea placeholder="Lesiones, contraindicaciones, embarazo, cirugías" value={form.notas_salud} onChange={(e) => setForm({ ...form, notas_salud: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
@@ -1252,8 +1252,8 @@ function NuevaInstructoraForm({ onClose, onCreated, token }) {
           <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Nueva instructora</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
-        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
-        <input placeholder="Teléfono (opcional)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Teléfono (opcional)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
         <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
           {busy ? "Creando..." : "Crear instructora"}
@@ -1308,8 +1308,8 @@ function EditarInstructoraForm({ instructora, onClose, onSaved, token }) {
           <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Editar instructora</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
-        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
-        <input placeholder="Teléfono (opcional)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && guardar()} placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input onKeyDown={(e) => e.key === "Enter" && guardar()} placeholder="Teléfono (opcional)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
         <button onClick={guardar} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY, marginBottom: 10 }}>
           {busy ? "Guardando..." : "Guardar cambios"}
@@ -1513,8 +1513,8 @@ function CambiarPassword({ session, onClose }) {
           <p style={{ fontSize: 14, color: MOSS_DARK, margin: "0 0 4px" }}>Listo, tu contraseña se actualizó. Usala la próxima vez que ingreses.</p>
         ) : (
           <>
-            <input placeholder="Nueva contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%", padding: 12, marginBottom: 9, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY }} />
-            <input placeholder="Repetí la contraseña" type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} style={{ width: "100%", padding: 12, marginBottom: 12, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Nueva contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%", padding: 12, marginBottom: 9, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY }} />
+            <input onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Repetí la contraseña" type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} style={{ width: "100%", padding: 12, marginBottom: 12, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY }} />
             {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 8px" }}>{err}</p>}
             <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
               {busy ? "Guardando..." : "Guardar nueva contraseña"}

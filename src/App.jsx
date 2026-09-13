@@ -442,26 +442,33 @@ function Landing({ onEnter }) {
   const pill = { display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 30, fontSize: 13.5, fontWeight: 600, fontFamily: FONT_BODY, textDecoration: "none", cursor: "pointer" };
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: FONT_BODY, color: INK }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        fontFamily: FONT_BODY,
+        color: INK,
+        backgroundColor: "#100F0E",
+        backgroundImage: `
+          radial-gradient(circle at 12% 8%, ${MOSS_LIGHT}55, transparent 42%),
+          radial-gradient(circle at 88% 0%, ${CLAY}44, transparent 40%),
+          radial-gradient(circle at 50% 70%, ${MOSS_DARK}44, transparent 55%),
+          linear-gradient(180deg, #171613 0%, #100F0E 100%)
+        `,
+        backgroundAttachment: "fixed",
+      }}
+    >
       {/* Hero */}
-      <div
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          padding: "60px 24px 90px",
-          background: `radial-gradient(circle at 15% 20%, ${MOSS}22, transparent 55%), radial-gradient(circle at 85% 0%, ${CLAY}22, transparent 45%)`,
-        }}
-      >
+      <div style={{ position: "relative", padding: "70px 24px 100px" }}>
         <div style={{ maxWidth: 880, margin: "0 auto" }}>
           <img
             src="/logo.png"
             alt="RYM Pilates"
-            style={{ width: 140, height: 140, borderRadius: 28, boxShadow: SHADOW_MD, marginBottom: 26, objectFit: "cover" }}
+            style={{ width: 140, height: 140, borderRadius: 28, boxShadow: SHADOW_LG, marginBottom: 26, objectFit: "cover" }}
           />
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: MOSS_DARK, margin: "0 0 18px" }}>
+          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#D8CBB0", margin: "0 0 18px" }}>
             Estudio de Reformer Pilates
           </p>
-          <p style={{ fontSize: 17, color: MUTE, maxWidth: 460, lineHeight: 1.6, margin: "0 0 34px" }}>
+          <p style={{ fontSize: 17, color: "#C9C2B4", maxWidth: 460, lineHeight: 1.6, margin: "0 0 34px" }}>
             Movimiento consciente, control y respiración sobre la cama de reformer. Clases reducidas, seguimiento personalizado.
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -471,7 +478,7 @@ function Landing({ onEnter }) {
             >
               Reservar una clase <ArrowRight size={16} />
             </button>
-            <a href={STUDIO_WHATSAPP} target="_blank" rel="noreferrer" style={{ ...pill, border: `1.5px solid ${INK}22`, background: "transparent", color: INK }}>
+            <a href={STUDIO_WHATSAPP} target="_blank" rel="noreferrer" style={{ ...pill, border: "1.5px solid #ffffff33", background: "#ffffff0d", color: "#F2EEE4" }}>
               <MessageCircle size={16} /> WhatsApp
             </a>
           </div>
@@ -479,31 +486,31 @@ function Landing({ onEnter }) {
       </div>
 
       {/* Sobre el estudio */}
-      <div style={{ maxWidth: 880, margin: "0 auto", padding: "70px 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 36 }}>
+      <div style={{ maxWidth: 880, margin: "0 auto", padding: "10px 24px 70px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
         {[
           ["Grupos reducidos", "Máximo de alumnos por clase para que cada ejercicio se corrija en el momento."],
           ["Nivel por alumno", "Progresás a tu ritmo: principiante, intermedio o avanzado, todo sobre la misma máquina."],
           ["Reservá desde acá", "Elegís horario y cama de reformer disponible al instante, sin llamadas ni mensajes."],
         ].map(([title, desc]) => (
-          <div key={title}>
-            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 20, margin: "0 0 8px" }}>{title}</h3>
-            <p style={{ fontSize: 14, color: MUTE, lineHeight: 1.6, margin: 0 }}>{desc}</p>
+          <div key={title} style={{ background: "#ffffff0d", border: "1px solid #ffffff1a", borderRadius: 18, padding: 22, backdropFilter: "blur(6px)" }}>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 20, margin: "0 0 8px", color: "#F2EEE4" }}>{title}</h3>
+            <p style={{ fontSize: 14, color: "#C9C2B4", lineHeight: 1.6, margin: 0 }}>{desc}</p>
           </div>
         ))}
       </div>
 
       {/* Ubicación + contacto */}
-      <div style={{ background: STONE, boxShadow: `inset 0 1px 0 ${INK}0f` }}>
-        <div style={{ maxWidth: 880, margin: "0 auto", padding: "60px 24px", display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between" }}>
+      <div style={{ maxWidth: 880, margin: "0 auto 70px", padding: "0 24px" }}>
+        <div style={{ background: STONE, borderRadius: 28, boxShadow: SHADOW_LG, padding: "44px 36px", display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between" }}>
           <div style={{ maxWidth: 340 }}>
-            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px" }}>Dónde estamos</h3>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px", color: INK }}>Dónde estamos</h3>
             <div style={{ display: "flex", gap: 8, alignItems: "flex-start", color: MUTE, fontSize: 14, lineHeight: 1.6 }}>
               <MapPin size={17} color={CLAY} style={{ flexShrink: 0, marginTop: 2 }} />
               <span>{STUDIO_ADDRESS}</span>
             </div>
           </div>
           <div>
-            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px" }}>Seguinos</h3>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px", color: INK }}>Seguinos</h3>
             <div style={{ display: "flex", gap: 10 }}>
               <a href={STUDIO_INSTAGRAM} target="_blank" rel="noreferrer" style={{ ...pill, border: `1.5px solid ${INK}22`, background: "transparent", color: INK, padding: "9px 16px" }}>
                 <Instagram size={16} /> Instagram
@@ -517,12 +524,12 @@ function Landing({ onEnter }) {
       </div>
 
       {/* CTA final */}
-      <div style={{ padding: "70px 24px", textAlign: "center" }}>
-        <h2 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 30, margin: "0 0 20px" }}>¿Lista para tu próxima clase?</h2>
+      <div style={{ padding: "10px 24px 80px", textAlign: "center" }}>
+        <h2 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 30, margin: "0 0 20px", color: "#F2EEE4" }}>¿Lista para tu próxima clase?</h2>
         <button onClick={onEnter} style={{ ...pill, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, boxShadow: SHADOW_MD, padding: "13px 26px", fontSize: 14.5 }}>
           Ver horarios y reservar <ArrowRight size={16} />
         </button>
-        <p style={{ marginTop: 40, fontSize: 12, color: MUTE }}>RYM Pilates</p>
+        <p style={{ marginTop: 40, fontSize: 12, color: "#8A8478" }}>RYM Pilates</p>
       </div>
     </div>
   );

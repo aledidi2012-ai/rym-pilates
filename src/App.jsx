@@ -129,7 +129,7 @@ function Header({ session, isAdmin, mode, setMode, onLogout, onShowLogin, onGoHo
   );
 }
 
-function ClienteView({ clases, alumnoActual, session, onNeedLogin, reload, error }) {
+function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeedLogin, reload, error }) {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [accionError, setAccionError] = useState("");
@@ -195,6 +195,14 @@ function ClienteView({ clases, alumnoActual, session, onNeedLogin, reload, error
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
+      {isAdmin && (
+        <button
+          onClick={onGoAdmin}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: `1.5px solid ${INK}22`, borderRadius: 20, padding: "7px 14px", color: INK, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, marginBottom: 18 }}
+        >
+          <ChevronLeft size={15} /> Volver al panel admin
+        </button>
+      )}
       <p style={{ fontSize: 14, color: MUTE, margin: "0 0 2px", fontWeight: 500 }}>
         {alumnoActual ? `Hola, ${alumnoActual.nombre.split(" ")[0]}` : "Hola"}
       </p>
@@ -934,7 +942,7 @@ export default function App() {
         {mode === "admin" && isAdmin ? (
           <AdminView clases={clases} alumnos={alumnos} reload={cargarTodo} token={session.token} />
         ) : (
-          <ClienteView clases={clases} alumnoActual={alumnoActual} session={session} onNeedLogin={() => setShowLogin(true)} reload={cargarTodo} error={error} />
+          <ClienteView clases={clases} alumnoActual={alumnoActual} session={session} isAdmin={isAdmin} onGoAdmin={() => setMode("admin")} onNeedLogin={() => setShowLogin(true)} reload={cargarTodo} error={error} />
         )}
       </div>
 

@@ -308,6 +308,93 @@ function NuevaClaseForm({ onClose, onCreated, token }) {
   );
 }
 
+function EditarClaseForm({ clase, onClose, onSaved, token }) {
+  const [form, setForm] = useState({
+    nombre: clase.nombre || "",
+    instructor: clase.instructor || "",
+    fecha: clase.fecha || "",
+    hora: clase.hora ? clase.hora.slice(0, 5) : "",
+    cupos_totales: clase.cupos_totales,
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
+
+  const guardar = async () => {
+    if (!form.nombre || !form.fecha || !form.hora) {
+      setErr("Completá nombre, fecha y hora.");
+      return;
+    }
+    if (Number(form.cupos_totales) > MAX_CAMAS_REFORMER) {
+      setErr(`El estudio tiene ${MAX_CAMAS_REFORMER} camas de reformer — no se pueden cargar más cupos que eso.`);
+      return;
+    }
+    if (Number(form.cupos_totales) < clase.cupos_ocupados) {
+      setErr(`Ya hay ${clase.cupos_ocupados} reservas hechas — no podés poner menos cupos que eso.`);
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await sb(`clases?id=eq.${clase.id}`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ ...form, cupos_totales: Number(form.cupos_totales) }),
+      });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo guardar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  const borrar = async () => {
+    if (!window.confirm("¿Seguro que querés borrar esta clase? También se van a borrar las reservas hechas para ella.")) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await sb(`reservas?clase_id=eq.${clase.id}`, { method: "DELETE", token });
+      await sb(`clases?id=eq.${clase.id}`, { method: "DELETE", token });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo borrar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 40 }}>
+      <div style={{ background: STONE, width: 380, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 20, margin: 0, color: INK }}>Editar clase</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        {["nombre", "instructor"].map((f) => (
+          <input key={f} placeholder={f === "nombre" ? "Nombre (ej. Reformer Nivel 1)" : "Instructor"} value={form[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} style={inputStyle} />
+        ))}
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+          <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+        </div>
+        <input type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
+        <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>
+          Máximo {MAX_CAMAS_REFORMER} camas · ya tiene {clase.cupos_ocupados} {clase.cupos_ocupados === 1 ? "reserva" : "reservas"} hecha{clase.cupos_ocupados === 1 ? "" : "s"}.
+        </p>
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+        <button onClick={guardar} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY, marginBottom: 10 }}>
+          {busy ? "Guardando..." : "Guardar cambios"}
+        </button>
+        <button onClick={borrar} disabled={busy} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${CLAY}`, background: "transparent", color: CLAY, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+          Borrar clase
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DarAccesoForm({ alumno, onClose, onDone, token }) {
   const [email, setEmail] = useState(alumno.email || "");
   const [password, setPassword] = useState("");
@@ -434,6 +521,7 @@ function AdminView({ clases, alumnos, reload, token }) {
   const [showForm, setShowForm] = useState(false);
   const [showAlumnoForm, setShowAlumnoForm] = useState(false);
   const [accesoAlumno, setAccesoAlumno] = useState(null);
+  const [editarClase, setEditarClase] = useState(null);
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
@@ -466,7 +554,11 @@ function AdminView({ clases, alumnos, reload, token }) {
       {tab === "clases" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {(clases || []).map((c) => (
-            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 18, padding: "16px 20px", borderRadius: 16, background: STONE, boxShadow: SHADOW_SM }}>
+            <button
+              key={c.id}
+              onClick={() => setEditarClase(c)}
+              style={{ display: "flex", alignItems: "center", gap: 18, padding: "16px 20px", borderRadius: 16, background: STONE, boxShadow: SHADOW_SM, border: "none", cursor: "pointer", textAlign: "left", fontFamily: FONT_BODY, width: "100%" }}
+            >
               <div style={{ width: 90, fontSize: 12.5, color: MUTE, fontWeight: 500 }}>{c.fecha}</div>
               <div style={{ width: 54, fontSize: 15, fontWeight: 700, color: INK }}>{c.hora?.slice(0, 5)}</div>
               <div style={{ flex: 1 }}>
@@ -476,7 +568,7 @@ function AdminView({ clases, alumnos, reload, token }) {
               <div style={{ fontSize: 12, color: c.cupos_ocupados === c.cupos_totales ? CLAY : MOSS_DARK, fontWeight: 700, background: c.cupos_ocupados === c.cupos_totales ? CLAY_LIGHT : `${MOSS}1c`, padding: "5px 11px", borderRadius: 10 }}>
                 {c.cupos_ocupados}/{c.cupos_totales}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       ) : (
@@ -505,6 +597,7 @@ function AdminView({ clases, alumnos, reload, token }) {
       {showForm && <NuevaClaseForm onClose={() => setShowForm(false)} onCreated={reload} token={token} />}
       {showAlumnoForm && <NuevoAlumnoForm onClose={() => setShowAlumnoForm(false)} onCreated={reload} token={token} />}
       {accesoAlumno && <DarAccesoForm alumno={accesoAlumno} onClose={() => setAccesoAlumno(null)} onDone={reload} token={token} />}
+      {editarClase && <EditarClaseForm clase={editarClase} onClose={() => setEditarClase(null)} onSaved={reload} token={token} />}
     </div>
   );
 }

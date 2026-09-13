@@ -705,15 +705,24 @@ function proximasFechas(diaSemana, cantidad) {
   return fechas;
 }
 
-function NuevaClaseForm({ onClose, onCreated, token }) {
+function NuevaClaseForm({ onClose, onCreated, token, alumnos }) {
   const [form, setForm] = useState({ nombre: "", instructor: "", fecha: "", hora: "", cupos_totales: MAX_CAMAS_REFORMER });
   const [recurrente, setRecurrente] = useState(false);
   const [diaSemana, setDiaSemana] = useState(1);
   const [semanas, setSemanas] = useState(8);
+  const [alumnosElegidos, setAlumnosElegidos] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
+
+  const toggleAlumno = (id) => {
+    setAlumnosElegidos((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= Number(form.cupos_totales)) return prev; // no superar los cupos
+      return [...prev, id];
+    });
+  };
 
   const submit = async () => {
     if (!form.nombre || !form.hora) {
@@ -755,7 +764,12 @@ function NuevaClaseForm({ onClose, onCreated, token }) {
         }));
         await sb("clases", { method: "POST", token, body: JSON.stringify(filas) });
       } else {
-        await sb("clases", { method: "POST", token, body: JSON.stringify({ ...form, cupos_totales: Number(form.cupos_totales), cupos_ocupados: 0 }) });
+        const creadas = await sb("clases", { method: "POST", token, body: JSON.stringify({ ...form, cupos_totales: Number(form.cupos_totales), cupos_ocupados: 0 }) });
+        const nuevaClaseId = creadas && creadas[0] && creadas[0].id;
+        if (nuevaClaseId && alumnosElegidos.length > 0) {
+          const filasReserva = alumnosElegidos.map((alumno_id) => ({ alumno_id, clase_id: nuevaClaseId }));
+          await sb("reservas", { method: "POST", body: JSON.stringify(filasReserva) });
+        }
       }
       onCreated();
       onClose();
@@ -807,6 +821,27 @@ function NuevaClaseForm({ onClose, onCreated, token }) {
 
         <input type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
         <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>Máximo {MAX_CAMAS_REFORMER} camas disponibles en el estudio.</p>
+
+        {!recurrente && alumnos && alumnos.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontSize: 12.5, color: INK, fontWeight: 600, margin: "0 0 8px" }}>
+              Anotar alumnos ahora ({alumnosElegidos.length}/{form.cupos_totales})
+            </p>
+            <div style={{ maxHeight: 160, overflowY: "auto", border: `1.5px solid ${MUTE}33`, borderRadius: 12, padding: 8 }}>
+              {alumnos.map((a) => {
+                const marcado = alumnosElegidos.includes(a.id);
+                const deshabilitado = !marcado && alumnosElegidos.length >= Number(form.cupos_totales);
+                return (
+                  <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", fontSize: 13, color: deshabilitado ? MUTE : INK, cursor: deshabilitado ? "default" : "pointer" }}>
+                    <input type="checkbox" checked={marcado} disabled={deshabilitado} onChange={() => toggleAlumno(a.id)} />
+                    {a.nombre}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
         <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
           {busy ? "Creando..." : recurrente ? `Crear ${semanas} clases` : "Crear clase"}
@@ -1206,7 +1241,7 @@ function AdminView({ clases, alumnos, reload, token }) {
         </div>
       )}
 
-      {showForm && <NuevaClaseForm onClose={() => setShowForm(false)} onCreated={reload} token={token} />}
+      {showForm && <NuevaClaseForm onClose={() => setShowForm(false)} onCreated={reload} token={token} alumnos={alumnos} />}
       {showAlumnoForm && <NuevoAlumnoForm onClose={() => setShowAlumnoForm(false)} onCreated={reload} token={token} />}
       {accesoAlumno && <DarAccesoForm alumno={accesoAlumno} onClose={() => setAccesoAlumno(null)} onDone={reload} token={token} />}
       {editarClase && <EditarClaseForm clase={editarClase} onClose={() => setEditarClase(null)} onSaved={reload} token={token} />}

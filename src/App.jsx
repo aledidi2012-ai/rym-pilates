@@ -769,13 +769,13 @@ function Landing({ onEnter, onLogin }) {
       }}
     >
       <div style={{ position: "relative", padding: "70px 24px 100px" }}>
-        <div style={{ maxWidth: 880, margin: "0 auto" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
           <img src="/logo.png" alt="RYM Pilates" style={{ width: 140, height: 140, borderRadius: 28, boxShadow: SHADOW_LG, marginBottom: 26, objectFit: "cover" }} />
           <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#D8CBB0", margin: "0 0 18px" }}>Estudio de Reformer Pilates</p>
           <p style={{ fontSize: 17, color: "#C9C2B4", maxWidth: 460, lineHeight: 1.6, margin: "0 0 34px" }}>
             Movimiento consciente, control y respiración sobre la cama de reformer. Clases reducidas, seguimiento personalizado.
           </p>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
             <button onClick={() => onLogin("cliente")} style={{ ...pill, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, boxShadow: SHADOW_MD }}>
               Acceso cliente <ArrowRight size={16} />
             </button>

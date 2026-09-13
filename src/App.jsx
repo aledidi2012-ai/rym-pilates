@@ -716,7 +716,7 @@ function Login({ onClose, onLoggedIn }) {
   );
 }
 
-function Landing({ onEnter }) {
+function Landing({ onEnter, onLogin }) {
   return (
     <div
       style={{
@@ -741,8 +741,11 @@ function Landing({ onEnter }) {
             Movimiento consciente, control y respiración sobre la cama de reformer. Clases reducidas, seguimiento personalizado.
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <button onClick={onEnter} style={{ ...pill, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, boxShadow: SHADOW_MD }}>
-              Reservar una clase <ArrowRight size={16} />
+            <button onClick={() => onLogin("cliente")} style={{ ...pill, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, boxShadow: SHADOW_MD }}>
+              Acceso cliente <ArrowRight size={16} />
+            </button>
+            <button onClick={() => onLogin("admin")} style={{ ...pill, border: "1.5px solid #ffffff33", background: "#ffffff0d", color: "#F2EEE4" }}>
+              Acceso admin
             </button>
             <a href={STUDIO_WHATSAPP} target="_blank" rel="noreferrer" style={{ ...pill, border: "1.5px solid #ffffff33", background: "#ffffff0d", color: "#F2EEE4" }}>
               <MessageCircle size={16} /> WhatsApp
@@ -883,7 +886,15 @@ export default function App() {
     : null;
 
   if (!entered) {
-    return <Landing onEnter={() => setEntered(true)} />;
+    return (
+      <Landing
+        onEnter={() => setEntered(true)}
+        onLogin={() => {
+          setEntered(true);
+          setShowLogin(true);
+        }}
+      />
+    );
   }
 
   return (

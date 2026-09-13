@@ -87,13 +87,15 @@ function ErrorBanner({ msg }) {
 function Header({ session, isAdmin, mode, setMode, onLogout, onShowLogin, onGoHome, onShowChangePassword }) {
   return (
     <div style={{ background: STONE, boxShadow: SHADOW_SM, position: "sticky", top: 0, zIndex: 30 }}>
-      <div style={{ ...container, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px" }}>
-        <button onClick={onGoHome} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer" }}>
+      <div style={{ ...container, display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", padding: "14px 24px", gap: 12 }}>
+        <div />
+
+        <button onClick={onGoHome} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", justifySelf: "center" }}>
           <img src="/logo.png" alt="RYM Pilates" style={{ width: 34, height: 34, borderRadius: 9, objectFit: "cover" }} />
           <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: INK, fontWeight: 500 }}>RYM Pilates</span>
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, justifySelf: "end" }}>
           {isAdmin && (
             <div style={{ display: "flex", gap: 4, background: BG, padding: 4, borderRadius: 14 }}>
               {[["cliente", "Vista cliente"], ["admin", "Panel admin"]].map(([key, label]) => (

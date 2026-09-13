@@ -377,9 +377,62 @@ function DarAccesoForm({ alumno, onClose, onDone, token }) {
   );
 }
 
+function NuevoAlumnoForm({ onClose, onCreated, token }) {
+  const [form, setForm] = useState({ nombre: "", paquete: "", clases_restantes: "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
+
+  const submit = async () => {
+    if (!form.nombre) {
+      setErr("Completá al menos el nombre.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await sb("alumnos", {
+        method: "POST",
+        token,
+        body: JSON.stringify({
+          nombre: form.nombre,
+          paquete: form.paquete || null,
+          clases_restantes: form.clases_restantes === "" ? null : Number(form.clases_restantes),
+        }),
+      });
+      onCreated();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo crear: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+      <div style={{ background: STONE, width: 340, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Nuevo alumno</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
+        <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
+        <p style={{ fontSize: 11.5, color: MUTE, margin: "-4px 0 14px" }}>Después podés darle acceso a la app desde el botón "Dar acceso" en su fila.</p>
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+        <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
+          {busy ? "Creando..." : "Crear alumno"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminView({ clases, alumnos, reload, token }) {
   const [tab, setTab] = useState("clases");
   const [showForm, setShowForm] = useState(false);
+  const [showAlumnoForm, setShowAlumnoForm] = useState(false);
   const [accesoAlumno, setAccesoAlumno] = useState(null);
 
   return (
@@ -400,6 +453,11 @@ function AdminView({ clases, alumnos, reload, token }) {
           {tab === "clases" && (
             <button onClick={() => setShowForm(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_SM, fontFamily: FONT_BODY }}>
               <Plus size={16} /> Nueva clase
+            </button>
+          )}
+          {tab === "alumnos" && (
+            <button onClick={() => setShowAlumnoForm(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_SM, fontFamily: FONT_BODY }}>
+              <Plus size={16} /> Nuevo alumno
             </button>
           )}
         </div>
@@ -445,6 +503,7 @@ function AdminView({ clases, alumnos, reload, token }) {
       )}
 
       {showForm && <NuevaClaseForm onClose={() => setShowForm(false)} onCreated={reload} token={token} />}
+      {showAlumnoForm && <NuevoAlumnoForm onClose={() => setShowAlumnoForm(false)} onCreated={reload} token={token} />}
       {accesoAlumno && <DarAccesoForm alumno={accesoAlumno} onClose={() => setAccesoAlumno(null)} onDone={reload} token={token} />}
     </div>
   );

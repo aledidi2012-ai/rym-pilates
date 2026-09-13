@@ -435,20 +435,11 @@ function MoverReservaForm({ claseOrigen, clases, alumnoActual, onClose, onMoved 
 }
 
 function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeedLogin, onGoHome, reload, error }) {
-  const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [accionError, setAccionError] = useState("");
   const [tab, setTab] = useState("clases");
   const [fechaSeleccionada, setFechaSeleccionada] = useState(formatFechaCal(new Date()));
   const [moverClase, setMoverClase] = useState(null);
-
-  useEffect(() => {
-    if (selected && clases) {
-      const fresh = clases.find((x) => x.id === selected.id);
-      if (fresh) setSelected(fresh);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clases]);
 
   if (!clases) {
     return <p style={{ fontSize: 14, color: MUTE, fontFamily: FONT_BODY }}>Cargando clases...</p>;
@@ -615,7 +606,6 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
         {clases.filter((c) => c.fecha === fechaSeleccionada).map((c) => {
           const libres = c.cupos_totales - c.cupos_ocupados;
           const reservada = c._misReservas && c._misReservas.length > 0;
-          const abierta = selected && selected.id === c.id;
           return (
             <div key={c.id} style={{ background: STONE, borderRadius: 20, boxShadow: SHADOW_SM, padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -632,17 +622,9 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
                 )}
               </div>
 
-              <button onClick={() => setSelected(abierta ? null : c)} style={{ alignSelf: "flex-start", background: "none", border: "none", color: MOSS_DARK, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: FONT_BODY }}>
-                {abierta ? "Ocultar cupos ↑" : `${libres === 0 ? "Completo" : `${libres} lugares libres`} — ver camas ↓`}
-              </button>
-
-              {abierta && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, maxWidth: 280 }}>
-                  {Array.from({ length: c.cupos_totales }).map((_, i) => (
-                    <Spot key={i} taken={i < c.cupos_ocupados} />
-                  ))}
-                </div>
-              )}
+              <p style={{ fontSize: 13, color: MUTE, margin: 0 }}>
+                {libres === 0 ? "Completo" : `${libres} ${libres === 1 ? "lugar libre" : "lugares libres"}`}
+              </p>
 
               {reservada ? (
                 <div style={{ display: "flex", gap: 8 }}>

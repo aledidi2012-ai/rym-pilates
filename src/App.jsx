@@ -146,6 +146,23 @@ function ClienteView({ clases, alumnoActual, session, onNeedLogin, reload, error
     return <p style={{ fontSize: 14, color: MUTE, fontFamily: FONT_BODY }}>Cargando clases...</p>;
   }
 
+  if (!session) {
+    return (
+      <div style={{ fontFamily: FONT_BODY, textAlign: "center", padding: "60px 20px" }}>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 500, color: INK, margin: "0 0 12px" }}>Iniciá sesión para ver tus clases</h1>
+        <p style={{ fontSize: 14, color: MUTE, margin: "0 0 24px", maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
+          Los horarios y las reservas están disponibles solo para alumnos con acceso a la app.
+        </p>
+        <button
+          onClick={onNeedLogin}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 30, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, boxShadow: SHADOW_SM }}
+        >
+          Ingresar
+        </button>
+      </div>
+    );
+  }
+
   const reservar = async (c) => {
     if (!session) return onNeedLogin();
     if (!alumnoActual) return;
@@ -179,7 +196,7 @@ function ClienteView({ clases, alumnoActual, session, onNeedLogin, reload, error
   return (
     <div style={{ fontFamily: FONT_BODY }}>
       <p style={{ fontSize: 14, color: MUTE, margin: "0 0 2px", fontWeight: 500 }}>
-        {alumnoActual ? `Hola, ${alumnoActual.nombre.split(" ")[0]}` : session ? "Hola" : "Mirá los horarios, iniciá sesión para reservar"}
+        {alumnoActual ? `Hola, ${alumnoActual.nombre.split(" ")[0]}` : "Hola"}
       </p>
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: INK, margin: "0 0 28px", letterSpacing: -0.5 }}>Clases disponibles</h1>
 

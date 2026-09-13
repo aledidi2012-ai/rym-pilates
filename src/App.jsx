@@ -25,6 +25,7 @@ const FONT_BODY = "'Manrope', -apple-system, Helvetica, Arial, sans-serif";
 const STUDIO_ADDRESS = "Belgrano 10, Bernal";
 const STUDIO_WHATSAPP = "https://wa.me/5491161626800";
 const STUDIO_INSTAGRAM = "https://instagram.com/rympilates";
+const ADMIN_EMAIL = "aledidi2012@gmail.com";
 const PLANES = [
   { veces: "Pack de 4 clases al mes", precio: "$35.000" },
   { veces: "Pack de 8 clases al mes", precio: "$45.000" },
@@ -83,7 +84,7 @@ function ErrorBanner({ msg }) {
   );
 }
 
-function Header({ adminToken, mode, setMode, onLogout, onShowLogin, onGoHome }) {
+function Header({ session, isAdmin, mode, setMode, onLogout, onShowLogin, onGoHome, onShowChangePassword }) {
   return (
     <div style={{ background: STONE, boxShadow: SHADOW_SM, position: "sticky", top: 0, zIndex: 30 }}>
       <div style={{ ...container, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px" }}>
@@ -93,7 +94,7 @@ function Header({ adminToken, mode, setMode, onLogout, onShowLogin, onGoHome }) 
         </button>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {adminToken && (
+          {isAdmin && (
             <div style={{ display: "flex", gap: 4, background: BG, padding: 4, borderRadius: 14 }}>
               {[["cliente", "Vista cliente"], ["admin", "Panel admin"]].map(([key, label]) => (
                 <button
@@ -106,22 +107,29 @@ function Header({ adminToken, mode, setMode, onLogout, onShowLogin, onGoHome }) 
               ))}
             </div>
           )}
-          {adminToken ? (
-            <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: CLAY, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
-              <LogOut size={15} /> Salir
-            </button>
+          {session ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <span style={{ fontSize: 12.5, color: MUTE, fontFamily: FONT_BODY }}>{session.email}</span>
+              <button onClick={onShowChangePassword} style={{ background: "none", border: "none", color: MOSS_DARK, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+                Cambiar contraseña
+              </button>
+              <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: CLAY, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+                <LogOut size={15} /> Salir
+              </button>
+            </div>
           ) : (
             <button onClick={onShowLogin} style={{ background: "none", border: `1.5px solid ${INK}22`, borderRadius: 20, padding: "7px 14px", color: INK, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
-              Acceso del estudio
+              Ingresar
             </button>
           )}
         </div>
+
       </div>
     </div>
   );
 }
 
-function ClienteView({ clases, alumnoDemo, reload, error }) {
+function ClienteView({ clases, alumnoActual, session, onNeedLogin, reload, error }) {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [accionError, setAccionError] = useState("");
@@ -139,11 +147,12 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
   }
 
   const reservar = async (c) => {
-    if (!alumnoDemo) return;
+    if (!session) return onNeedLogin();
+    if (!alumnoActual) return;
     setBusy(true);
     setAccionError("");
     try {
-      await sb("reservas", { method: "POST", body: JSON.stringify({ alumno_id: alumnoDemo.id, clase_id: c.id }) });
+      await sb("reservas", { method: "POST", body: JSON.stringify({ alumno_id: alumnoActual.id, clase_id: c.id }) });
       await reload();
     } catch (e) {
       setAccionError(`No se pudo reservar: ${e.message}`);
@@ -153,7 +162,7 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
   };
 
   const cancelar = async (c) => {
-    if (!alumnoDemo) return;
+    if (!alumnoActual) return;
     setBusy(true);
     setAccionError("");
     try {
@@ -169,11 +178,16 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
-      <p style={{ fontSize: 14, color: MUTE, margin: "0 0 2px", fontWeight: 500 }}>{alumnoDemo ? `Hola, ${alumnoDemo.nombre.split(" ")[0]}` : "Cargando..."}</p>
+      <p style={{ fontSize: 14, color: MUTE, margin: "0 0 2px", fontWeight: 500 }}>
+        {alumnoActual ? `Hola, ${alumnoActual.nombre.split(" ")[0]}` : session ? "Hola" : "Mirá los horarios, iniciá sesión para reservar"}
+      </p>
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: INK, margin: "0 0 28px", letterSpacing: -0.5 }}>Clases disponibles</h1>
 
       <ErrorBanner msg={error} />
       <ErrorBanner msg={accionError} />
+      {session && !alumnoActual && (
+        <ErrorBanner msg="Tu email no está vinculado a ningún alumno todavía. Contactá al estudio para que lo vinculen." />
+      )}
 
       {clases.length === 0 && <p style={{ fontSize: 14, color: MUTE }}>Todavía no hay clases cargadas. Agregalas desde el panel admin.</p>}
 
@@ -228,7 +242,7 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
                     fontFamily: FONT_BODY,
                   }}
                 >
-                  {libres === 0 ? "Sin lugares" : busy ? "..." : "Reservar clase"}
+                  {libres === 0 ? "Sin lugares" : busy ? "..." : session ? "Reservar clase" : "Iniciá sesión para reservar"}
                 </button>
               )}
             </div>
@@ -294,9 +308,79 @@ function NuevaClaseForm({ onClose, onCreated, token }) {
   );
 }
 
+function DarAccesoForm({ alumno, onClose, onDone, token }) {
+  const [email, setEmail] = useState(alumno.email || "");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState(false);
+
+  const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
+
+  const submit = async () => {
+    if (!email || !password) {
+      setErr("Completá email y contraseña.");
+      return;
+    }
+    if (password.length < 6) {
+      setErr("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if ((data.msg || data.message || "").toLowerCase().includes("already")) {
+          setErr("Ese email ya tiene una cuenta creada. Igual lo vinculamos al alumno.");
+        } else {
+          throw new Error(data.msg || data.message || "error desconocido");
+        }
+      }
+      await sb(`alumnos?id=eq.${alumno.id}`, { method: "PATCH", token, body: JSON.stringify({ email }) });
+      setOk(true);
+      onDone();
+    } catch (e) {
+      setErr(`No se pudo dar de alta: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+      <div style={{ background: STONE, width: 340, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Dar acceso</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <p style={{ fontSize: 13, color: MUTE, margin: "0 0 16px" }}>{alumno.nombre}</p>
+        {ok ? (
+          <p style={{ fontSize: 14, color: MOSS_DARK, margin: 0 }}>Listo, ya puede ingresar con ese email y contraseña.</p>
+        ) : (
+          <>
+            <input placeholder="Email del alumno" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+            <input placeholder="Contraseña inicial" type="text" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
+            <p style={{ fontSize: 11.5, color: MUTE, margin: "-4px 0 14px" }}>Pasásela vos al alumno — después la puede cambiar desde "Cambiar contraseña".</p>
+            {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+            <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
+              {busy ? "Creando..." : "Dar acceso"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AdminView({ clases, alumnos, reload, token }) {
   const [tab, setTab] = useState("clases");
   const [showForm, setShowForm] = useState(false);
+  const [accesoAlumno, setAccesoAlumno] = useState(null);
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
@@ -346,20 +430,90 @@ function AdminView({ clases, alumnos, reload, token }) {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14.5, color: INK, fontWeight: 600 }}>{a.nombre}</div>
-                <div style={{ fontSize: 12.5, color: MUTE, marginTop: 2 }}>{a.paquete || "sin paquete"}</div>
+                <div style={{ fontSize: 12.5, color: MUTE, marginTop: 2 }}>{a.paquete || "sin paquete"}{a.email ? ` · ${a.email}` : ""}</div>
               </div>
               <div style={{ fontSize: 13, color: MOSS_DARK, fontWeight: 700 }}>{a.clases_restantes ?? "—"}</div>
+              <button
+                onClick={() => setAccesoAlumno(a)}
+                style={{ background: "none", border: `1.5px solid ${INK}22`, borderRadius: 20, padding: "6px 12px", color: INK, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, flexShrink: 0 }}
+              >
+                {a.email ? "Cambiar acceso" : "Dar acceso"}
+              </button>
             </div>
           ))}
         </div>
       )}
 
       {showForm && <NuevaClaseForm onClose={() => setShowForm(false)} onCreated={reload} token={token} />}
+      {accesoAlumno && <DarAccesoForm alumno={accesoAlumno} onClose={() => setAccesoAlumno(null)} onDone={reload} token={token} />}
     </div>
   );
 }
 
-function AdminLogin({ onClose, onLoggedIn }) {
+function CambiarPassword({ session, onClose }) {
+  const [password, setPassword] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState(false);
+
+  const submit = async () => {
+    if (password.length < 6) {
+      setErr("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (password !== confirmar) {
+      setErr("Las contraseñas no coinciden.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: "PUT",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${session.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+      setOk(true);
+    } catch (e) {
+      setErr("No se pudo cambiar la contraseña. Puede que haga falta volver a iniciar sesión.");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, fontFamily: FONT_BODY }}>
+      <div style={{ background: STONE, width: 320, borderRadius: 22, padding: 24, boxShadow: SHADOW_LG }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Cambiar contraseña</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        {ok ? (
+          <p style={{ fontSize: 14, color: MOSS_DARK, margin: "0 0 4px" }}>Listo, tu contraseña se actualizó. Usala la próxima vez que ingreses.</p>
+        ) : (
+          <>
+            <input placeholder="Nueva contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%", padding: 12, marginBottom: 9, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY }} />
+            <input placeholder="Repetí la contraseña" type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} style={{ width: "100%", padding: 12, marginBottom: 12, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY }} />
+            {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 8px" }}>{err}</p>}
+            <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
+              {busy ? "Guardando..." : "Guardar nueva contraseña"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Login({ onClose, onLoggedIn }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -384,7 +538,7 @@ function AdminLogin({ onClose, onLoggedIn }) {
         setBusy(false);
         return;
       }
-      onLoggedIn(data.access_token);
+      onLoggedIn(data.access_token, data.user?.email || email);
       onClose();
     } catch (e) {
       setErr("No se pudo conectar.");
@@ -396,7 +550,7 @@ function AdminLogin({ onClose, onLoggedIn }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, fontFamily: FONT_BODY }}>
       <div style={{ background: STONE, width: 320, borderRadius: 22, padding: 24, boxShadow: SHADOW_LG }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Acceso del estudio</h3>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Ingresar</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
         <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: "100%", padding: 12, marginBottom: 9, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY }} />
@@ -517,13 +671,17 @@ function Landing({ onEnter }) {
 
 export default function App() {
   const [mode, setMode] = useState("cliente");
-  const [clases, setClases] = useState(null);
+  const [clasesRaw, setClasesRaw] = useState(null);
   const [alumnos, setAlumnos] = useState(null);
-  const [alumnoDemo, setAlumnoDemo] = useState(null);
+  const [misReservas, setMisReservas] = useState([]);
+  const [alumnoActual, setAlumnoActual] = useState(null);
   const [error, setError] = useState("");
   const [showLogin, setShowLogin] = useState(false);
-  const [adminToken, setAdminToken] = useState(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [session, setSession] = useState(null); // { token, email }
   const [entered, setEntered] = useState(false);
+
+  const isAdmin = !!session && session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const cargarTodo = useCallback(async () => {
     try {
@@ -532,18 +690,8 @@ export default function App() {
         sb("clases?select=*&order=fecha,hora"),
         sb("alumnos?select=*&order=nombre&limit=200"),
       ]);
-      let misReservas = [];
-      const demo = alumnosData && alumnosData[0];
-      if (demo) {
-        misReservas = (await sb(`reservas?alumno_id=eq.${demo.id}&select=*`)) || [];
-      }
-      const clasesConReservas = (clasesData || []).map((c) => ({
-        ...c,
-        _misReservas: misReservas.filter((r) => r.clase_id === c.id),
-      }));
-      setClases(clasesConReservas);
+      setClasesRaw(clasesData || []);
       setAlumnos(alumnosData || []);
-      setAlumnoDemo(demo || null);
     } catch (e) {
       setError(`No se pudo conectar a Supabase: ${e.message}`);
       console.error(e);
@@ -554,6 +702,34 @@ export default function App() {
     cargarTodo();
   }, [cargarTodo]);
 
+  // Cuando cambia la sesión o la lista de alumnos, buscamos qué alumno corresponde a ese email
+  useEffect(() => {
+    async function resolverAlumno() {
+      if (!session || isAdmin || !alumnos) {
+        setAlumnoActual(null);
+        setMisReservas([]);
+        return;
+      }
+      const match = alumnos.find((a) => (a.email || "").trim().toLowerCase() === session.email.trim().toLowerCase());
+      setAlumnoActual(match || null);
+      if (match) {
+        try {
+          const r = await sb(`reservas?alumno_id=eq.${match.id}&select=*`);
+          setMisReservas(r || []);
+        } catch (e) {
+          setMisReservas([]);
+        }
+      } else {
+        setMisReservas([]);
+      }
+    }
+    resolverAlumno();
+  }, [session, alumnos, isAdmin]);
+
+  const clases = clasesRaw
+    ? clasesRaw.map((c) => ({ ...c, _misReservas: misReservas.filter((r) => r.clase_id === c.id) }))
+    : null;
+
   if (!entered) {
     return <Landing onEnter={() => setEntered(true)} />;
   }
@@ -561,33 +737,39 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: BG }}>
       <Header
-        adminToken={adminToken}
+        session={session}
+        isAdmin={isAdmin}
         mode={mode}
         setMode={setMode}
         onLogout={() => {
-          setAdminToken(null);
+          setSession(null);
           setMode("cliente");
         }}
         onShowLogin={() => setShowLogin(true)}
+        onShowChangePassword={() => setShowChangePassword(true)}
         onGoHome={() => setEntered(false)}
       />
 
       <div style={{ ...container, padding: "36px 24px 80px" }}>
-        {mode === "admin" && adminToken ? (
-          <AdminView clases={clases} alumnos={alumnos} reload={cargarTodo} token={adminToken} />
+        {mode === "admin" && isAdmin ? (
+          <AdminView clases={clases} alumnos={alumnos} reload={cargarTodo} token={session.token} />
         ) : (
-          <ClienteView clases={clases} alumnoDemo={alumnoDemo} reload={cargarTodo} error={error} />
+          <ClienteView clases={clases} alumnoActual={alumnoActual} session={session} onNeedLogin={() => setShowLogin(true)} reload={cargarTodo} error={error} />
         )}
       </div>
 
       {showLogin && (
-        <AdminLogin
+        <Login
           onClose={() => setShowLogin(false)}
-          onLoggedIn={(token) => {
-            setAdminToken(token);
-            setMode("admin");
+          onLoggedIn={(token, email) => {
+            setSession({ token, email });
+            setMode(email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? "admin" : "cliente");
           }}
         />
+      )}
+
+      {showChangePassword && session && (
+        <CambiarPassword session={session} onClose={() => setShowChangePassword(false)} />
       )}
     </div>
   );

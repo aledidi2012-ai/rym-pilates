@@ -135,6 +135,12 @@ function Header({ session, isAdmin, mode, setMode, onLogout, onShowLogin, onGoHo
   );
 }
 
+function paqueteTotal(paqueteStr) {
+  if (!paqueteStr) return null;
+  const m = paqueteStr.match(/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
 function MiPerfil({ alumno, session, reload }) {
   const [notas, setNotas] = useState(alumno.notas_salud || "");
   const [busy, setBusy] = useState(false);
@@ -155,10 +161,37 @@ function MiPerfil({ alumno, session, reload }) {
     setBusy(false);
   };
 
+  const totalPaquete = paqueteTotal(alumno.paquete);
+  const tomadas = totalPaquete != null && alumno.clases_restantes != null ? Math.max(0, totalPaquete - alumno.clases_restantes) : null;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const vencido = alumno.fecha_vencimiento && alumno.fecha_vencimiento < hoy;
+
   return (
     <div>
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: INK, margin: "0 0 8px", letterSpacing: -0.5 }}>Mi perfil</h1>
-      <p style={{ fontSize: 14, color: MUTE, margin: "0 0 24px" }}>{alumno.nombre} · {alumno.paquete || "sin paquete"} · {alumno.clases_restantes ?? "—"} clases restantes</p>
+      <p style={{ fontSize: 14, color: MUTE, margin: "0 0 24px" }}>{alumno.nombre} · {alumno.paquete || "sin paquete"}</p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 20, maxWidth: 660 }}>
+        <div style={{ background: STONE, borderRadius: 16, boxShadow: SHADOW_SM, padding: 18 }}>
+          <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase" }}>Progreso del paquete</p>
+          {tomadas != null ? (
+            <p style={{ fontSize: 18, color: INK, fontWeight: 700, margin: 0, fontFamily: FONT_DISPLAY }}>
+              Clase Nº {tomadas + 1} de {totalPaquete}
+            </p>
+          ) : (
+            <p style={{ fontSize: 18, color: INK, fontWeight: 700, margin: 0, fontFamily: FONT_DISPLAY }}>
+              {alumno.clases_restantes ?? "—"} clases restantes
+            </p>
+          )}
+        </div>
+        <div style={{ background: STONE, borderRadius: 16, boxShadow: SHADOW_SM, padding: 18 }}>
+          <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase" }}>Pago</p>
+          <p style={{ fontSize: 13.5, color: INK, margin: "0 0 2px" }}>{alumno.fecha_pago ? `Pagado el ${alumno.fecha_pago}` : "Sin fecha de pago cargada"}</p>
+          <p style={{ fontSize: 13.5, color: vencido ? CLAY : MUTE, fontWeight: vencido ? 700 : 400, margin: 0 }}>
+            {alumno.fecha_vencimiento ? `${vencido ? "Venció" : "Vence"} el ${alumno.fecha_vencimiento}` : "Sin vencimiento cargado"}
+          </p>
+        </div>
+      </div>
 
       <div style={{ background: STONE, borderRadius: 18, boxShadow: SHADOW_SM, padding: 22, maxWidth: 480 }}>
         <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 18, margin: "0 0 8px", color: INK }}>Lesiones y salud</h3>
@@ -416,6 +449,9 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
     setAccionError("");
     try {
       await sb("reservas", { method: "POST", body: JSON.stringify({ alumno_id: alumnoActual.id, clase_id: c.id }) });
+      if (c._esperaId) {
+        await sb(`espera?id=eq.${c._esperaId}`, { method: "DELETE" });
+      }
       await reload();
     } catch (e) {
       setAccionError(`No se pudo reservar: ${e.message}`);
@@ -438,6 +474,34 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
     }
     setBusy(false);
   };
+
+  const anotarseEspera = async (c) => {
+    if (!session) return onNeedLogin();
+    if (!alumnoActual) return;
+    setBusy(true);
+    setAccionError("");
+    try {
+      await sb("espera", { method: "POST", body: JSON.stringify({ alumno_id: alumnoActual.id, clase_id: c.id }) });
+      await reload();
+    } catch (e) {
+      setAccionError(`No se pudo anotar en la lista de espera: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  const salirEspera = async (c) => {
+    setBusy(true);
+    setAccionError("");
+    try {
+      await sb(`espera?id=eq.${c._esperaId}`, { method: "DELETE" });
+      await reload();
+    } catch (e) {
+      setAccionError(`No se pudo sacar de la lista de espera: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  const avisos = clases.filter((c) => c._enEspera && c.cupos_totales - c.cupos_ocupados > 0);
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
@@ -475,6 +539,20 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
         <ErrorBanner msg="Tu email no está vinculado a ningún alumno todavía. Contactá al estudio para que lo vinculen." />
       )}
 
+      {avisos.length > 0 && (
+        <div style={{ background: `${MOSS}22`, border: `1.5px solid ${MOSS}`, borderRadius: 14, padding: "14px 16px", marginBottom: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: MOSS_DARK, margin: "0 0 8px" }}>¡Se liberó un lugar en algo que esperabas!</p>
+          {avisos.map((c) => (
+            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, color: INK }}>{c.nombre} · {c.fecha} {c.hora?.slice(0, 5)}</span>
+              <button onClick={() => reservar(c)} disabled={busy} style={{ background: MOSS_DARK, color: STONE, border: "none", borderRadius: 10, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+                Reservar ahora
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {clases.length === 0 && <p style={{ fontSize: 14, color: MUTE }}>Todavía no hay clases cargadas. Agregalas desde el panel admin.</p>}
 
       {clases.length > 0 && (
@@ -506,6 +584,9 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
                 {reservada && (
                   <span style={{ fontSize: 10.5, color: MOSS_DARK, background: `${MOSS}1c`, padding: "4px 9px", borderRadius: 20, fontWeight: 700, textTransform: "uppercase" }}>Reservada</span>
                 )}
+                {!reservada && c._enEspera && (
+                  <span style={{ fontSize: 10.5, color: "#7A2E14", background: CLAY_LIGHT, padding: "4px 9px", borderRadius: 20, fontWeight: 700, textTransform: "uppercase" }}>En espera</span>
+                )}
               </div>
 
               <button onClick={() => setSelected(abierta ? null : c)} style={{ alignSelf: "flex-start", background: "none", border: "none", color: MOSS_DARK, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: FONT_BODY }}>
@@ -529,24 +610,42 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
                     {busy ? "..." : "Cancelar"}
                   </button>
                 </div>
+              ) : libres === 0 ? (
+                <button
+                  onClick={() => (c._enEspera ? salirEspera(c) : anotarseEspera(c))}
+                  disabled={busy}
+                  style={{
+                    padding: "11px 0",
+                    borderRadius: 12,
+                    border: `1.5px solid ${c._enEspera ? CLAY : MOSS}`,
+                    background: c._enEspera ? CLAY_LIGHT : "transparent",
+                    color: c._enEspera ? "#7A2E14" : MOSS_DARK,
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: FONT_BODY,
+                  }}
+                >
+                  {busy ? "..." : c._enEspera ? "Salir de la lista de espera" : "Avisarme si se libera"}
+                </button>
               ) : (
                 <button
-                  disabled={libres === 0 || busy}
+                  disabled={busy}
                   onClick={() => reservar(c)}
                   style={{
                     padding: "11px 0",
                     borderRadius: 12,
                     border: "none",
-                    background: libres === 0 ? MUTE : `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`,
+                    background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`,
                     color: STONE,
                     fontSize: 14,
                     fontWeight: 600,
-                    cursor: libres === 0 ? "default" : "pointer",
-                    boxShadow: libres === 0 ? "none" : SHADOW_SM,
+                    cursor: "pointer",
+                    boxShadow: SHADOW_SM,
                     fontFamily: FONT_BODY,
                   }}
                 >
-                  {libres === 0 ? "Sin lugares" : busy ? "..." : session ? "Reservar clase" : "Iniciá sesión para reservar"}
+                  {busy ? "..." : session ? "Reservar clase" : "Iniciá sesión para reservar"}
                 </button>
               )}
             </div>
@@ -874,7 +973,7 @@ function DarAccesoForm({ alumno, onClose, onDone, token }) {
 }
 
 function NuevoAlumnoForm({ onClose, onCreated, token }) {
-  const [form, setForm] = useState({ nombre: "", paquete: "", clases_restantes: "", notas_salud: "" });
+  const [form, setForm] = useState({ nombre: "", paquete: "", clases_restantes: "", notas_salud: "", fecha_pago: "", fecha_vencimiento: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -896,6 +995,8 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
           paquete: form.paquete || null,
           clases_restantes: form.clases_restantes === "" ? null : Number(form.clases_restantes),
           notas_salud: form.notas_salud || null,
+          fecha_pago: form.fecha_pago || null,
+          fecha_vencimiento: form.fecha_vencimiento || null,
         }),
       });
       onCreated();
@@ -907,7 +1008,7 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px 0", overflowY: "auto" }}>
       <div style={{ background: STONE, width: 340, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Nuevo alumno</h3>
@@ -916,6 +1017,16 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
         <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
         <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
         <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de pago</label>
+            <input type="date" value={form.fecha_pago} onChange={(e) => setForm({ ...form, fecha_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Vence</label>
+            <input type="date" value={form.fecha_vencimiento} onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+          </div>
+        </div>
         <textarea placeholder="Lesiones, contraindicaciones, embarazo, cirugías (opcional)" value={form.notas_salud} onChange={(e) => setForm({ ...form, notas_salud: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
         <p style={{ fontSize: 11.5, color: MUTE, margin: "-4px 0 14px" }}>Después podés darle acceso a la app desde el botón "Dar acceso" en su fila.</p>
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
@@ -933,6 +1044,8 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
     paquete: alumno.paquete || "",
     clases_restantes: alumno.clases_restantes ?? "",
     notas_salud: alumno.notas_salud || "",
+    fecha_pago: alumno.fecha_pago || "",
+    fecha_vencimiento: alumno.fecha_vencimiento || "",
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -955,6 +1068,8 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
           paquete: form.paquete || null,
           clases_restantes: form.clases_restantes === "" ? null : Number(form.clases_restantes),
           notas_salud: form.notas_salud || null,
+          fecha_pago: form.fecha_pago || null,
+          fecha_vencimiento: form.fecha_vencimiento || null,
         }),
       });
       onSaved();
@@ -966,7 +1081,7 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px 0", overflowY: "auto" }}>
       <div style={{ background: STONE, width: 340, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Editar alumno</h3>
@@ -975,6 +1090,16 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
         <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
         <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
         <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de pago</label>
+            <input type="date" value={form.fecha_pago} onChange={(e) => setForm({ ...form, fecha_pago: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Vence</label>
+            <input type="date" value={form.fecha_vencimiento} onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+          </div>
+        </div>
         <textarea placeholder="Lesiones, contraindicaciones, embarazo, cirugías" value={form.notas_salud} onChange={(e) => setForm({ ...form, notas_salud: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
         <button onClick={guardar} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
@@ -1058,8 +1183,13 @@ function AdminView({ clases, alumnos, reload, token }) {
                   {a.notas_salud && (
                     <span title={a.notas_salud} style={{ fontSize: 10, color: CLAY, background: CLAY_LIGHT, padding: "2px 7px", borderRadius: 10, fontWeight: 700 }}>salud</span>
                   )}
+                  {a.fecha_vencimiento && a.fecha_vencimiento < formatFechaCal(new Date()) && (
+                    <span style={{ fontSize: 10, color: "#7A2E14", background: CLAY_LIGHT, padding: "2px 7px", borderRadius: 10, fontWeight: 700 }}>vencido</span>
+                  )}
                 </div>
-                <div style={{ fontSize: 12.5, color: MUTE, marginTop: 2 }}>{a.paquete || "sin paquete"}{a.email ? ` · ${a.email}` : ""}</div>
+                <div style={{ fontSize: 12.5, color: MUTE, marginTop: 2 }}>
+                  {a.paquete || "sin paquete"}{a.email ? ` · ${a.email}` : ""}{a.fecha_vencimiento ? ` · vence ${a.fecha_vencimiento}` : ""}
+                </div>
               </div>
               <div style={{ fontSize: 13, color: MOSS_DARK, fontWeight: 700 }}>{a.clases_restantes ?? "—"}</div>
               <button
@@ -1321,6 +1451,7 @@ export default function App() {
   const [clasesRaw, setClasesRaw] = useState(null);
   const [alumnos, setAlumnos] = useState(null);
   const [misReservas, setMisReservas] = useState([]);
+  const [miEspera, setMiEspera] = useState([]);
   const [alumnoActual, setAlumnoActual] = useState(null);
   const [error, setError] = useState("");
   const [showLogin, setShowLogin] = useState(false);
@@ -1355,26 +1486,41 @@ export default function App() {
       if (!session || isAdmin || !alumnos) {
         setAlumnoActual(null);
         setMisReservas([]);
+        setMiEspera([]);
         return;
       }
       const match = alumnos.find((a) => (a.email || "").trim().toLowerCase() === session.email.trim().toLowerCase());
       setAlumnoActual(match || null);
       if (match) {
         try {
-          const r = await sb(`reservas?alumno_id=eq.${match.id}&select=*`);
+          const [r, esp] = await Promise.all([
+            sb(`reservas?alumno_id=eq.${match.id}&select=*`),
+            sb(`espera?alumno_id=eq.${match.id}&select=*`),
+          ]);
           setMisReservas(r || []);
+          setMiEspera(esp || []);
         } catch (e) {
           setMisReservas([]);
+          setMiEspera([]);
         }
       } else {
         setMisReservas([]);
+        setMiEspera([]);
       }
     }
     resolverAlumno();
   }, [session, alumnos, isAdmin]);
 
   const clases = clasesRaw
-    ? clasesRaw.map((c) => ({ ...c, _misReservas: misReservas.filter((r) => r.clase_id === c.id) }))
+    ? clasesRaw.map((c) => {
+        const esperaRow = miEspera.find((e) => e.clase_id === c.id);
+        return {
+          ...c,
+          _misReservas: misReservas.filter((r) => r.clase_id === c.id),
+          _enEspera: !!esperaRow,
+          _esperaId: esperaRow ? esperaRow.id : null,
+        };
+      })
     : null;
 
   if (!entered) {

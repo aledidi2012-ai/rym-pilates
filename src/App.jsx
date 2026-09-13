@@ -119,6 +119,7 @@ function Header({ adminToken, mode, setMode, onLogout, onShowLogin, onGoHome }) 
 function ClienteView({ clases, alumnoDemo, reload, error }) {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [accionError, setAccionError] = useState("");
 
   useEffect(() => {
     if (selected && clases) {
@@ -135,11 +136,12 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
   const reservar = async (c) => {
     if (!alumnoDemo) return;
     setBusy(true);
+    setAccionError("");
     try {
       await sb("reservas", { method: "POST", body: JSON.stringify({ alumno_id: alumnoDemo.id, clase_id: c.id }) });
-      await sb(`clases?id=eq.${c.id}`, { method: "PATCH", body: JSON.stringify({ cupos_ocupados: c.cupos_ocupados + 1 }) });
       await reload();
     } catch (e) {
+      setAccionError(`No se pudo reservar: ${e.message}`);
       console.error(e);
     }
     setBusy(false);
@@ -148,12 +150,13 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
   const cancelar = async (c) => {
     if (!alumnoDemo) return;
     setBusy(true);
+    setAccionError("");
     try {
       const reservaId = c._misReservas[0].id;
       await sb(`reservas?id=eq.${reservaId}`, { method: "DELETE" });
-      await sb(`clases?id=eq.${c.id}`, { method: "PATCH", body: JSON.stringify({ cupos_ocupados: Math.max(0, c.cupos_ocupados - 1) }) });
       await reload();
     } catch (e) {
+      setAccionError(`No se pudo cancelar: ${e.message}`);
       console.error(e);
     }
     setBusy(false);
@@ -165,6 +168,7 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: INK, margin: "0 0 28px", letterSpacing: -0.5 }}>Clases disponibles</h1>
 
       <ErrorBanner msg={error} />
+      <ErrorBanner msg={accionError} />
 
       {clases.length === 0 && <p style={{ fontSize: 14, color: MUTE }}>Todavía no hay clases cargadas. Agregalas desde el panel admin.</p>}
 

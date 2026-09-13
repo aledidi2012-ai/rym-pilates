@@ -748,7 +748,7 @@ function proximasFechas(diaSemana, cantidad) {
   return fechas;
 }
 
-function NuevaClaseForm({ onClose, onCreated, token, alumnos }) {
+function NuevaClaseForm({ onClose, onCreated, token, alumnos, instructores }) {
   const [form, setForm] = useState({ nombre: "", instructor: "", fecha: "", hora: "", cupos_totales: MAX_CAMAS_REFORMER });
   const [recurrente, setRecurrente] = useState(false);
   const [diaSemana, setDiaSemana] = useState(1);
@@ -841,7 +841,7 @@ function NuevaClaseForm({ onClose, onCreated, token, alumnos }) {
             placeholder={f === "nombre" ? "Nombre (elegí un alumno o escribí uno nuevo)" : "Instructor"}
             value={form[f]}
             onChange={(e) => setForm({ ...form, [f]: e.target.value })}
-            list={f === "nombre" ? "lista-alumnos-nombre" : undefined}
+            list={f === "nombre" ? "lista-alumnos-nombre" : "lista-instructoras-nombre"}
             style={inputStyle}
           />
         ))}
@@ -849,6 +849,13 @@ function NuevaClaseForm({ onClose, onCreated, token, alumnos }) {
           <datalist id="lista-alumnos-nombre">
             {alumnos.map((a) => (
               <option key={a.id} value={a.nombre} />
+            ))}
+          </datalist>
+        )}
+        {instructores && (
+          <datalist id="lista-instructoras-nombre">
+            {instructores.map((i) => (
+              <option key={i.id} value={i.nombre} />
             ))}
           </datalist>
         )}
@@ -1248,24 +1255,129 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
   );
 }
 
-function AdminView({ clases, alumnos, reload, token }) {
+function NuevaInstructoraForm({ onClose, onCreated, token }) {
+  const [form, setForm] = useState({ nombre: "", telefono: "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
+
+  const submit = async () => {
+    if (!form.nombre) {
+      setErr("Completá el nombre.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await sb("instructores", { method: "POST", token, body: JSON.stringify({ nombre: form.nombre, telefono: form.telefono || null }) });
+      onCreated();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo crear: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+      <div style={{ background: STONE, width: 320, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Nueva instructora</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input placeholder="Teléfono (opcional)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+        <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
+          {busy ? "Creando..." : "Crear instructora"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EditarInstructoraForm({ instructora, onClose, onSaved, token }) {
+  const [form, setForm] = useState({ nombre: instructora.nombre || "", telefono: instructora.telefono || "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
+
+  const guardar = async () => {
+    if (!form.nombre) {
+      setErr("El nombre no puede quedar vacío.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await sb(`instructores?id=eq.${instructora.id}`, { method: "PATCH", token, body: JSON.stringify({ nombre: form.nombre, telefono: form.telefono || null }) });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo guardar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  const borrar = async () => {
+    if (!window.confirm(`¿Seguro que querés borrar a ${instructora.nombre} de la lista de instructoras?`)) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await sb(`instructores?id=eq.${instructora.id}`, { method: "DELETE", token });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo borrar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+      <div style={{ background: STONE, width: 320, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Editar instructora</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input placeholder="Teléfono (opcional)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} style={inputStyle} />
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+        <button onClick={guardar} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY, marginBottom: 10 }}>
+          {busy ? "Guardando..." : "Guardar cambios"}
+        </button>
+        <button onClick={borrar} disabled={busy} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${CLAY}`, background: "transparent", color: CLAY, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+          Borrar instructora
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdminView({ clases, alumnos, instructores, reload, token }) {
   const [tab, setTab] = useState("clases");
   const [showForm, setShowForm] = useState(false);
   const [showAlumnoForm, setShowAlumnoForm] = useState(false);
+  const [showInstructoraForm, setShowInstructoraForm] = useState(false);
   const [accesoAlumno, setAccesoAlumno] = useState(null);
   const [editarClase, setEditarClase] = useState(null);
   const [editarAlumno, setEditarAlumno] = useState(null);
+  const [editarInstructora, setEditarInstructora] = useState(null);
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24, flexWrap: "wrap", gap: 14 }}>
         <div>
           <p style={{ fontSize: 13, color: MUTE, margin: "0 0 2px", fontWeight: 500 }}>RYM Pilates — panel</p>
-          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 500, color: INK, margin: 0, letterSpacing: -0.5 }}>{tab === "clases" ? "Clases" : "Alumnos"}</h1>
+          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 500, color: INK, margin: 0, letterSpacing: -0.5 }}>
+            {tab === "clases" ? "Clases" : tab === "alumnos" ? "Alumnos" : "Instructoras"}
+          </h1>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 4, background: BG, padding: 4, borderRadius: 14 }}>
-            {[["clases", "Clases"], ["alumnos", "Alumnos"]].map(([key, label]) => (
+            {[["clases", "Clases"], ["alumnos", "Alumnos"], ["instructoras", "Instructoras"]].map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)} style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: tab === key ? MOSS_DARK : "transparent", color: tab === key ? STONE : MUTE, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
                 {label}
               </button>
@@ -1279,6 +1391,11 @@ function AdminView({ clases, alumnos, reload, token }) {
           {tab === "alumnos" && (
             <button onClick={() => setShowAlumnoForm(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_SM, fontFamily: FONT_BODY }}>
               <Plus size={16} /> Nuevo alumno
+            </button>
+          )}
+          {tab === "instructoras" && (
+            <button onClick={() => setShowInstructoraForm(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_SM, fontFamily: FONT_BODY }}>
+              <Plus size={16} /> Nueva instructora
             </button>
           )}
         </div>
@@ -1304,7 +1421,7 @@ function AdminView({ clases, alumnos, reload, token }) {
             </button>
           ))}
         </div>
-      ) : (
+      ) : tab === "alumnos" ? (
         <div style={{ background: STONE, borderRadius: 18, boxShadow: SHADOW_SM, overflow: "hidden" }}>
           {(alumnos || []).map((a, i) => (
             <div
@@ -1348,13 +1465,34 @@ function AdminView({ clases, alumnos, reload, token }) {
             </div>
           ))}
         </div>
+      ) : (
+        <div style={{ background: STONE, borderRadius: 18, boxShadow: SHADOW_SM, overflow: "hidden" }}>
+          {(instructores || []).length === 0 && <p style={{ fontSize: 13, color: MUTE, padding: 20 }}>Todavía no cargaste ninguna instructora.</p>}
+          {(instructores || []).map((i, idx) => (
+            <div
+              key={i.id}
+              onClick={() => setEditarInstructora(i)}
+              style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 20px", borderTop: idx === 0 ? "none" : `1px solid ${MUTE}22`, cursor: "pointer" }}
+            >
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: `linear-gradient(135deg, ${CLAY_LIGHT}, #fff)`, color: CLAY, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                {i.nombre.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14.5, color: INK, fontWeight: 600 }}>{i.nombre}</div>
+                {i.telefono && <div style={{ fontSize: 12.5, color: MUTE, marginTop: 2 }}>{i.telefono}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
-      {showForm && <NuevaClaseForm onClose={() => setShowForm(false)} onCreated={reload} token={token} alumnos={alumnos} />}
+      {showForm && <NuevaClaseForm onClose={() => setShowForm(false)} onCreated={reload} token={token} alumnos={alumnos} instructores={instructores} />}
       {showAlumnoForm && <NuevoAlumnoForm onClose={() => setShowAlumnoForm(false)} onCreated={reload} token={token} />}
+      {showInstructoraForm && <NuevaInstructoraForm onClose={() => setShowInstructoraForm(false)} onCreated={reload} token={token} />}
       {accesoAlumno && <DarAccesoForm alumno={accesoAlumno} onClose={() => setAccesoAlumno(null)} onDone={reload} token={token} />}
       {editarClase && <EditarClaseForm clase={editarClase} onClose={() => setEditarClase(null)} onSaved={reload} token={token} />}
       {editarAlumno && <EditarAlumnoForm alumno={editarAlumno} onClose={() => setEditarAlumno(null)} onSaved={reload} token={token} />}
+      {editarInstructora && <EditarInstructoraForm instructora={editarInstructora} onClose={() => setEditarInstructora(null)} onSaved={reload} token={token} />}
     </div>
   );
 }
@@ -1594,6 +1732,7 @@ export default function App() {
   const [mode, setMode] = useState("cliente");
   const [clasesRaw, setClasesRaw] = useState(null);
   const [alumnos, setAlumnos] = useState(null);
+  const [instructores, setInstructores] = useState(null);
   const [misReservas, setMisReservas] = useState([]);
   const [miEspera, setMiEspera] = useState([]);
   const [alumnoActual, setAlumnoActual] = useState(null);
@@ -1608,12 +1747,14 @@ export default function App() {
   const cargarTodo = useCallback(async () => {
     try {
       setError("");
-      const [clasesData, alumnosData] = await Promise.all([
+      const [clasesData, alumnosData, instructoresData] = await Promise.all([
         sb("clases?select=*&order=fecha,hora"),
         sb("alumnos?select=*&order=nombre&limit=200"),
+        sb("instructores?select=*&order=nombre"),
       ]);
       setClasesRaw(clasesData || []);
       setAlumnos(alumnosData || []);
+      setInstructores(instructoresData || []);
     } catch (e) {
       setError(`No se pudo conectar a Supabase: ${e.message}`);
       console.error(e);
@@ -1697,7 +1838,7 @@ export default function App() {
 
       <div style={{ ...container, padding: "36px 24px 80px" }}>
         {mode === "admin" && isAdmin ? (
-          <AdminView clases={clases} alumnos={alumnos} reload={cargarTodo} token={session.token} />
+          <AdminView clases={clases} alumnos={alumnos} instructores={instructores} reload={cargarTodo} token={session.token} />
         ) : (
           <ClienteView clases={clases} alumnoActual={alumnoActual} session={session} isAdmin={isAdmin} onGoAdmin={() => setMode("admin")} onNeedLogin={() => setShowLogin(true)} onGoHome={() => setEntered(false)} reload={cargarTodo} error={error} />
         )}

@@ -270,12 +270,107 @@ function Calendario({ fechasConClases, fechasReservadas, fechaSeleccionada, onSe
   );
 }
 
+function MoverReservaForm({ claseOrigen, clases, alumnoActual, onClose, onMoved }) {
+  const [fecha, setFecha] = useState(claseOrigen.fecha);
+  const [nuevaClaseId, setNuevaClaseId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const opciones = clases.filter((c) => c.fecha === fecha && c.id !== claseOrigen.id && c.cupos_ocupados < c.cupos_totales);
+
+  const confirmar = async () => {
+    if (!nuevaClaseId) {
+      setErr("Elegí un horario disponible.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const reservaVieja = claseOrigen._misReservas[0].id;
+      await sb(`reservas?id=eq.${reservaVieja}`, { method: "DELETE" });
+      await sb("reservas", { method: "POST", body: JSON.stringify({ alumno_id: alumnoActual.id, clase_id: nuevaClaseId }) });
+      await onMoved();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo mover la reserva: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, fontFamily: FONT_BODY, padding: "24px 16px", overflowY: "auto" }}>
+      <div style={{ background: STONE, width: 360, maxWidth: "100%", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Cambiar de horario</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <p style={{ fontSize: 13, color: MUTE, margin: "0 0 16px" }}>
+          Reserva actual: {claseOrigen.nombre} · {claseOrigen.fecha} {claseOrigen.hora?.slice(0, 5)}
+        </p>
+
+        <Calendario
+          fechasConClases={new Set(clases.filter((c) => c.id !== claseOrigen.id && c.cupos_ocupados < c.cupos_totales).map((c) => c.fecha))}
+          fechasReservadas={new Set()}
+          fechaSeleccionada={fecha}
+          onSelect={(f) => {
+            setFecha(f);
+            setNuevaClaseId(null);
+          }}
+        />
+
+        <p style={{ fontSize: 12.5, color: MUTE, margin: "0 0 8px", fontWeight: 600 }}>Horarios disponibles ese día</p>
+        {opciones.length === 0 ? (
+          <p style={{ fontSize: 13, color: MUTE, marginBottom: 14 }}>No hay horarios libres ese día. Elegí otro día en el calendario.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+            {opciones.map((c) => {
+              const libres = c.cupos_totales - c.cupos_ocupados;
+              const elegido = nuevaClaseId === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setNuevaClaseId(c.id)}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: elegido ? `1.5px solid ${MOSS}` : `1.5px solid ${MUTE}33`,
+                    background: elegido ? `${MOSS}1c` : "transparent",
+                    cursor: "pointer",
+                    fontFamily: FONT_BODY,
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontSize: 13.5, color: INK, fontWeight: 600 }}>{c.hora?.slice(0, 5)} · {c.nombre}</span>
+                  <span style={{ fontSize: 11.5, color: MUTE }}>{libres} libres</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+        <button
+          onClick={confirmar}
+          disabled={busy || !nuevaClaseId}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: nuevaClaseId ? `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})` : MUTE, color: STONE, fontSize: 14, fontWeight: 600, cursor: nuevaClaseId ? "pointer" : "default", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}
+        >
+          {busy ? "Moviendo..." : "Confirmar cambio"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeedLogin, onGoHome, reload, error }) {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [accionError, setAccionError] = useState("");
   const [tab, setTab] = useState("clases");
   const [fechaSeleccionada, setFechaSeleccionada] = useState(formatFechaCal(new Date()));
+  const [moverClase, setMoverClase] = useState(null);
 
   useEffect(() => {
     if (selected && clases) {
@@ -426,9 +521,14 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
               )}
 
               {reservada ? (
-                <button onClick={() => cancelar(c)} disabled={busy} style={{ padding: "11px 0", borderRadius: 12, border: `1.5px solid ${CLAY}`, background: "transparent", color: CLAY, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
-                  {busy ? "..." : "Cancelar reserva"}
-                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => setMoverClase(c)} disabled={busy} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: `1.5px solid ${MOSS}`, background: "transparent", color: MOSS_DARK, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+                    Cambiar horario
+                  </button>
+                  <button onClick={() => cancelar(c)} disabled={busy} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: `1.5px solid ${CLAY}`, background: "transparent", color: CLAY, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+                    {busy ? "..." : "Cancelar"}
+                  </button>
+                </div>
               ) : (
                 <button
                   disabled={libres === 0 || busy}
@@ -454,6 +554,16 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
         })}
       </div>
       </>
+      )}
+
+      {moverClase && (
+        <MoverReservaForm
+          claseOrigen={moverClase}
+          clases={clases}
+          alumnoActual={alumnoActual}
+          onClose={() => setMoverClase(null)}
+          onMoved={reload}
+        />
       )}
     </div>
   );

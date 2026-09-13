@@ -141,6 +141,22 @@ function paqueteTotal(paqueteStr) {
   return m ? Number(m[1]) : null;
 }
 
+function alertaVencimiento(alumno) {
+  if (!alumno) return null;
+  const dias = diasHasta(alumno.fecha_vencimiento);
+  const pocasClases = alumno.clases_restantes != null && alumno.clases_restantes <= 1;
+  if (dias != null && dias < 0) {
+    return { tipo: "vencido", texto: `Tu paquete venció el ${alumno.fecha_vencimiento}. Renoválo para seguir reservando.` };
+  }
+  if ((dias != null && dias <= 7) || pocasClases) {
+    const partes = [];
+    if (dias != null && dias <= 7) partes.push(`vence el ${alumno.fecha_vencimiento}`);
+    if (pocasClases) partes.push(alumno.clases_restantes === 1 ? "te queda 1 clase" : "te quedan 0 clases");
+    return { tipo: "por_vencer", texto: `Tu paquete está por terminar: ${partes.join(" y ")}. Hablá con el estudio para renovar antes de tu próxima clase.` };
+  }
+  return null;
+}
+
 function MiPerfil({ alumno, session, reload }) {
   const [notas, setNotas] = useState(alumno.notas_salud || "");
   const [busy, setBusy] = useState(false);
@@ -165,11 +181,18 @@ function MiPerfil({ alumno, session, reload }) {
   const tomadas = totalPaquete != null && alumno.clases_restantes != null ? Math.max(0, totalPaquete - alumno.clases_restantes) : null;
   const hoy = new Date().toISOString().slice(0, 10);
   const vencido = alumno.fecha_vencimiento && alumno.fecha_vencimiento < hoy;
+  const alerta = alertaVencimiento(alumno);
 
   return (
     <div>
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: INK, margin: "0 0 8px", letterSpacing: -0.5 }}>Mi perfil</h1>
       <p style={{ fontSize: 14, color: MUTE, margin: "0 0 24px" }}>{alumno.nombre} · {alumno.paquete || "sin paquete"}</p>
+
+      {alerta && (
+        <div style={{ background: alerta.tipo === "vencido" ? CLAY_LIGHT : `${CLAY}22`, border: `1.5px solid ${CLAY}`, borderRadius: 14, padding: "12px 16px", marginBottom: 20, maxWidth: 480 }}>
+          <p style={{ fontSize: 13, color: "#7A2E14", fontWeight: 600, margin: 0 }}>{alerta.texto}</p>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 20, maxWidth: 660 }}>
         <div style={{ background: STONE, borderRadius: 16, boxShadow: SHADOW_SM, padding: 18 }}>
@@ -220,6 +243,20 @@ function formatFechaCal(d) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function sumarUnMes(fechaStr) {
+  if (!fechaStr) return "";
+  const d = new Date(`${fechaStr}T00:00:00`);
+  d.setMonth(d.getMonth() + 1);
+  return formatFechaCal(d);
+}
+
+function diasHasta(fechaStr) {
+  if (!fechaStr) return null;
+  const hoy = new Date(`${formatFechaCal(new Date())}T00:00:00`);
+  const meta = new Date(`${fechaStr}T00:00:00`);
+  return Math.round((meta - hoy) / 86400000);
 }
 
 function Calendario({ fechasConClases, fechasReservadas, fechaSeleccionada, onSelect }) {
@@ -537,6 +574,12 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
       <ErrorBanner msg={accionError} />
       {session && !alumnoActual && (
         <ErrorBanner msg="Tu email no está vinculado a ningún alumno todavía. Contactá al estudio para que lo vinculen." />
+      )}
+
+      {alumnoActual && alertaVencimiento(alumnoActual) && (
+        <div style={{ background: `${CLAY}22`, border: `1.5px solid ${CLAY}`, borderRadius: 14, padding: "12px 16px", marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: "#7A2E14", fontWeight: 600, margin: 0 }}>{alertaVencimiento(alumnoActual).texto}</p>
+        </div>
       )}
 
       {avisos.length > 0 && (
@@ -1067,7 +1110,15 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
         <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
         <div style={{ marginBottom: 10 }}>
           <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de inicio en el estudio</label>
-          <input type="date" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+          <input
+            type="date"
+            value={form.fecha_inicio}
+            onChange={(e) => {
+              const v = e.target.value;
+              setForm((f) => ({ ...f, fecha_inicio: v, fecha_vencimiento: sumarUnMes(v) }));
+            }}
+            style={{ ...inputStyle, marginBottom: 0 }}
+          />
         </div>
         <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
         <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
@@ -1136,6 +1187,22 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
     setBusy(false);
   };
 
+  const borrar = async () => {
+    if (!window.confirm(`¿Seguro que querés borrar a ${alumno.nombre}? También se van a borrar sus reservas y su lugar en listas de espera. Esto no borra su acceso/login si lo tenía — eso hay que sacarlo aparte en Supabase si hace falta.`)) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await sb(`reservas?alumno_id=eq.${alumno.id}`, { method: "DELETE", token });
+      await sb(`espera?alumno_id=eq.${alumno.id}`, { method: "DELETE", token });
+      await sb(`alumnos?id=eq.${alumno.id}`, { method: "DELETE", token });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo borrar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px 0", overflowY: "auto" }}>
       <div style={{ background: STONE, width: 340, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
@@ -1146,7 +1213,15 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
         <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
         <div style={{ marginBottom: 10 }}>
           <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de inicio en el estudio</label>
-          <input type="date" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+          <input
+            type="date"
+            value={form.fecha_inicio}
+            onChange={(e) => {
+              const v = e.target.value;
+              setForm((f) => ({ ...f, fecha_inicio: v, fecha_vencimiento: sumarUnMes(v) }));
+            }}
+            style={{ ...inputStyle, marginBottom: 0 }}
+          />
         </div>
         <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
         <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
@@ -1162,8 +1237,11 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
         </div>
         <textarea placeholder="Lesiones, contraindicaciones, embarazo, cirugías" value={form.notas_salud} onChange={(e) => setForm({ ...form, notas_salud: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
-        <button onClick={guardar} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
+        <button onClick={guardar} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY, marginBottom: 10 }}>
           {busy ? "Guardando..." : "Guardar cambios"}
+        </button>
+        <button onClick={borrar} disabled={busy} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${CLAY}`, background: "transparent", color: CLAY, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+          Borrar alumno
         </button>
       </div>
     </div>
@@ -1246,6 +1324,12 @@ function AdminView({ clases, alumnos, reload, token }) {
                   {a.fecha_vencimiento && a.fecha_vencimiento < formatFechaCal(new Date()) && (
                     <span style={{ fontSize: 10, color: "#7A2E14", background: CLAY_LIGHT, padding: "2px 7px", borderRadius: 10, fontWeight: 700 }}>vencido</span>
                   )}
+                  {(() => {
+                    const alerta = alertaVencimiento(a);
+                    return alerta && alerta.tipo === "por_vencer" ? (
+                      <span style={{ fontSize: 10, color: "#7A2E14", background: `${CLAY}33`, padding: "2px 7px", borderRadius: 10, fontWeight: 700 }}>vence pronto</span>
+                    ) : null;
+                  })()}
                 </div>
                 <div style={{ fontSize: 12.5, color: MUTE, marginTop: 2 }}>
                   {a.paquete || "sin paquete"}{a.email ? ` · ${a.email}` : ""}{a.fecha_vencimiento ? ` · vence ${a.fecha_vencimiento}` : ""}

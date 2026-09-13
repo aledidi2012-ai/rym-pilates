@@ -793,8 +793,22 @@ function NuevaClaseForm({ onClose, onCreated, token, alumnos }) {
         </label>
 
         {["nombre", "instructor"].map((f) => (
-          <input key={f} placeholder={f === "nombre" ? "Nombre (ej. Reformer Nivel 1)" : "Instructor"} value={form[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} style={inputStyle} />
+          <input
+            key={f}
+            placeholder={f === "nombre" ? "Nombre (elegí un alumno o escribí uno nuevo)" : "Instructor"}
+            value={form[f]}
+            onChange={(e) => setForm({ ...form, [f]: e.target.value })}
+            list={f === "nombre" ? "lista-alumnos-nombre" : undefined}
+            style={inputStyle}
+          />
         ))}
+        {alumnos && (
+          <datalist id="lista-alumnos-nombre">
+            {alumnos.map((a) => (
+              <option key={a.id} value={a.nombre} />
+            ))}
+          </datalist>
+        )}
 
         {recurrente ? (
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>

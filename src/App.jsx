@@ -1022,7 +1022,7 @@ function DarAccesoForm({ alumno, onClose, onDone, token }) {
 }
 
 function NuevoAlumnoForm({ onClose, onCreated, token }) {
-  const [form, setForm] = useState({ nombre: "", paquete: "", clases_restantes: "", notas_salud: "", fecha_pago: "", fecha_vencimiento: "" });
+  const [form, setForm] = useState({ nombre: "", paquete: "", clases_restantes: "", notas_salud: "", fecha_pago: "", fecha_vencimiento: "", fecha_inicio: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -1046,6 +1046,7 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
           notas_salud: form.notas_salud || null,
           fecha_pago: form.fecha_pago || null,
           fecha_vencimiento: form.fecha_vencimiento || null,
+          fecha_inicio: form.fecha_inicio || null,
         }),
       });
       onCreated();
@@ -1064,6 +1065,10 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
         <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <div style={{ marginBottom: 10 }}>
+          <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de inicio en el estudio</label>
+          <input type="date" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+        </div>
         <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
         <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -1095,6 +1100,7 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
     notas_salud: alumno.notas_salud || "",
     fecha_pago: alumno.fecha_pago || "",
     fecha_vencimiento: alumno.fecha_vencimiento || "",
+    fecha_inicio: alumno.fecha_inicio || "",
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -1119,6 +1125,7 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
           notas_salud: form.notas_salud || null,
           fecha_pago: form.fecha_pago || null,
           fecha_vencimiento: form.fecha_vencimiento || null,
+          fecha_inicio: form.fecha_inicio || null,
         }),
       });
       onSaved();
@@ -1137,6 +1144,10 @@ function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
         <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <div style={{ marginBottom: 10 }}>
+          <label style={{ fontSize: 11, color: MUTE, marginBottom: 4, display: "block" }}>Fecha de inicio en el estudio</label>
+          <input type="date" value={form.fecha_inicio} onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }} />
+        </div>
         <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
         <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>

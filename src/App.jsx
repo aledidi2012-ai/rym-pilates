@@ -129,7 +129,7 @@ function Header({ session, isAdmin, mode, setMode, onLogout, onShowLogin, onGoHo
   );
 }
 
-function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeedLogin, reload, error }) {
+function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeedLogin, onGoHome, reload, error }) {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [accionError, setAccionError] = useState("");
@@ -155,10 +155,18 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
         </p>
         <button
           onClick={onNeedLogin}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 30, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, boxShadow: SHADOW_SM }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 30, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, boxShadow: SHADOW_SM, marginBottom: 14 }}
         >
           Ingresar
         </button>
+        <div>
+          <button
+            onClick={onGoHome}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", color: MUTE, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}
+          >
+            <ChevronLeft size={14} /> Volver al inicio
+          </button>
+        </div>
       </div>
     );
   }
@@ -942,7 +950,7 @@ export default function App() {
         {mode === "admin" && isAdmin ? (
           <AdminView clases={clases} alumnos={alumnos} reload={cargarTodo} token={session.token} />
         ) : (
-          <ClienteView clases={clases} alumnoActual={alumnoActual} session={session} isAdmin={isAdmin} onGoAdmin={() => setMode("admin")} onNeedLogin={() => setShowLogin(true)} reload={cargarTodo} error={error} />
+          <ClienteView clases={clases} alumnoActual={alumnoActual} session={session} isAdmin={isAdmin} onGoAdmin={() => setMode("admin")} onNeedLogin={() => setShowLogin(true)} onGoHome={() => setEntered(false)} reload={cargarTodo} error={error} />
         )}
       </div>
 

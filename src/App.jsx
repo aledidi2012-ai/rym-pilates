@@ -182,11 +182,89 @@ function MiPerfil({ alumno, session, reload }) {
   );
 }
 
+function formatFechaCal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function Calendario({ fechasConClases, fechaSeleccionada, onSelect }) {
+  const inicial = fechaSeleccionada ? new Date(`${fechaSeleccionada}T00:00:00`) : new Date();
+  const [mesVisible, setMesVisible] = useState(new Date(inicial.getFullYear(), inicial.getMonth(), 1));
+
+  const nombreMes = mesVisible.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  const primerDiaSemana = mesVisible.getDay();
+  const offset = (primerDiaSemana + 6) % 7; // semana arranca en lunes
+  const diasEnMes = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).getDate();
+
+  const celdas = [];
+  for (let i = 0; i < offset; i++) celdas.push(null);
+  for (let d = 1; d <= diasEnMes; d++) celdas.push(d);
+
+  const hoy = formatFechaCal(new Date());
+
+  return (
+    <div style={{ background: STONE, borderRadius: 18, boxShadow: SHADOW_SM, padding: 18, marginBottom: 22, maxWidth: 320, fontFamily: FONT_BODY }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <button onClick={() => setMesVisible(new Date(mesVisible.getFullYear(), mesVisible.getMonth() - 1, 1))} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+          <ChevronLeft size={18} color={INK} />
+        </button>
+        <span style={{ fontSize: 14, fontWeight: 700, color: INK, textTransform: "capitalize" }}>{nombreMes}</span>
+        <button onClick={() => setMesVisible(new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 1))} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, transform: "rotate(180deg)" }}>
+          <ChevronLeft size={18} color={INK} />
+        </button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+          <div key={i} style={{ textAlign: "center", fontSize: 10.5, color: MUTE, fontWeight: 700 }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+        {celdas.map((d, i) => {
+          if (d === null) return <div key={i} />;
+          const fechaStr = formatFechaCal(new Date(mesVisible.getFullYear(), mesVisible.getMonth(), d));
+          const tieneClases = fechasConClases.has(fechaStr);
+          const esSeleccionado = fechaStr === fechaSeleccionada;
+          const esHoy = fechaStr === hoy;
+          return (
+            <button
+              key={i}
+              onClick={() => onSelect(fechaStr)}
+              style={{
+                aspectRatio: "1",
+                borderRadius: 8,
+                border: esHoy && !esSeleccionado ? `1.5px solid ${MOSS}` : "none",
+                background: esSeleccionado ? MOSS_DARK : "transparent",
+                color: esSeleccionado ? STONE : INK,
+                fontSize: 12.5,
+                fontWeight: esSeleccionado ? 700 : 500,
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+                fontFamily: FONT_BODY,
+                padding: 0,
+              }}
+            >
+              {d}
+              {tieneClases && <span style={{ width: 4, height: 4, borderRadius: "50%", background: esSeleccionado ? STONE : CLAY, position: "absolute", bottom: 5 }} />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeedLogin, onGoHome, reload, error }) {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [accionError, setAccionError] = useState("");
   const [tab, setTab] = useState("clases");
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(formatFechaCal(new Date()));
 
   useEffect(() => {
     if (selected && clases) {
@@ -293,8 +371,20 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
 
       {clases.length === 0 && <p style={{ fontSize: 14, color: MUTE }}>Todavía no hay clases cargadas. Agregalas desde el panel admin.</p>}
 
+      {clases.length > 0 && (
+        <Calendario
+          fechasConClases={new Set(clases.map((c) => c.fecha))}
+          fechaSeleccionada={fechaSeleccionada}
+          onSelect={setFechaSeleccionada}
+        />
+      )}
+
+      {clases.length > 0 && clases.filter((c) => c.fecha === fechaSeleccionada).length === 0 && (
+        <p style={{ fontSize: 14, color: MUTE, marginBottom: 18 }}>No hay clases cargadas para ese día. Elegí otro día en el calendario.</p>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
-        {clases.map((c) => {
+        {clases.filter((c) => c.fecha === fechaSeleccionada).map((c) => {
           const libres = c.cupos_totales - c.cupos_ocupados;
           const reservada = c._misReservas && c._misReservas.length > 0;
           const abierta = selected && selected.id === c.id;
@@ -489,7 +579,7 @@ function NuevaClaseForm({ onClose, onCreated, token }) {
 
         {recurrente && (
           <>
-            <input type="number" min="1" max="26" value={semanas} onChange={(e) => setSemanas(e.target.value)} style={{ ...inputStyle, marginBottom: 4 }} />
+            <input type="number" min="1" max="52" value={semanas} onChange={(e) => setSemanas(e.target.value)} style={{ ...inputStyle, marginBottom: 4 }} />
             <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>Cantidad de semanas a generar (se crea una clase por cada {DIAS_SEMANA.find((d) => d.valor === diaSemana)?.nombre.toLowerCase()}).</p>
           </>
         )}

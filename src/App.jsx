@@ -189,7 +189,7 @@ function formatFechaCal(d) {
   return `${y}-${m}-${day}`;
 }
 
-function Calendario({ fechasConClases, fechaSeleccionada, onSelect }) {
+function Calendario({ fechasConClases, fechasReservadas, fechaSeleccionada, onSelect }) {
   const inicial = fechaSeleccionada ? new Date(`${fechaSeleccionada}T00:00:00`) : new Date();
   const [mesVisible, setMesVisible] = useState(new Date(inicial.getFullYear(), inicial.getMonth(), 1));
 
@@ -225,6 +225,7 @@ function Calendario({ fechasConClases, fechaSeleccionada, onSelect }) {
           if (d === null) return <div key={i} />;
           const fechaStr = formatFechaCal(new Date(mesVisible.getFullYear(), mesVisible.getMonth(), d));
           const tieneClases = fechasConClases.has(fechaStr);
+          const reservada = fechasReservadas && fechasReservadas.has(fechaStr);
           const esSeleccionado = fechaStr === fechaSeleccionada;
           const esHoy = fechaStr === hoy;
           return (
@@ -235,10 +236,10 @@ function Calendario({ fechasConClases, fechaSeleccionada, onSelect }) {
                 aspectRatio: "1",
                 borderRadius: 8,
                 border: esHoy && !esSeleccionado ? `1.5px solid ${MOSS}` : "none",
-                background: esSeleccionado ? MOSS_DARK : "transparent",
-                color: esSeleccionado ? STONE : INK,
+                background: esSeleccionado ? MOSS_DARK : reservada ? `${MOSS}2e` : "transparent",
+                color: esSeleccionado ? STONE : reservada ? MOSS_DARK : INK,
                 fontSize: 12.5,
-                fontWeight: esSeleccionado ? 700 : 500,
+                fontWeight: esSeleccionado || reservada ? 700 : 500,
                 cursor: "pointer",
                 display: "flex",
                 flexDirection: "column",
@@ -250,10 +251,20 @@ function Calendario({ fechasConClases, fechaSeleccionada, onSelect }) {
               }}
             >
               {d}
-              {tieneClases && <span style={{ width: 4, height: 4, borderRadius: "50%", background: esSeleccionado ? STONE : CLAY, position: "absolute", bottom: 5 }} />}
+              {tieneClases && (
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: esSeleccionado ? STONE : reservada ? MOSS_DARK : CLAY, position: "absolute", bottom: 5 }} />
+              )}
             </button>
           );
         })}
+      </div>
+      <div style={{ display: "flex", gap: 14, marginTop: 12, fontSize: 11, color: MUTE }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: CLAY, display: "inline-block" }} /> con clases
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: MOSS_DARK, display: "inline-block" }} /> reservado
+        </span>
       </div>
     </div>
   );
@@ -374,6 +385,7 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
       {clases.length > 0 && (
         <Calendario
           fechasConClases={new Set(clases.map((c) => c.fecha))}
+          fechasReservadas={new Set(clases.filter((c) => c._misReservas && c._misReservas.length > 0).map((c) => c.fecha))}
           fechaSeleccionada={fechaSeleccionada}
           onSelect={setFechaSeleccionada}
         />

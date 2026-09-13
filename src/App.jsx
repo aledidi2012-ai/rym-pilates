@@ -21,10 +21,15 @@ const SHADOW_LG = "0 20px 48px rgba(28,27,25,0.22)";
 const FONT_DISPLAY = "'Fraunces', Georgia, serif";
 const FONT_BODY = "'Manrope', -apple-system, Helvetica, Arial, sans-serif";
 
-// ---- DATOS DEL ESTUDIO: editá estas 3 líneas cuando quieras ----
+// ---- DATOS DEL ESTUDIO: editá estas líneas cuando quieras ----
 const STUDIO_ADDRESS = "Belgrano 10, Bernal";
 const STUDIO_WHATSAPP = "https://wa.me/5491161626800";
 const STUDIO_INSTAGRAM = "https://instagram.com/rympilates";
+const PLANES = [
+  { veces: "Pack de 4 clases al mes", precio: "$35.000" },
+  { veces: "Pack de 8 clases al mes", precio: "$45.000" },
+  { veces: "Pack de 12 clases al mes", precio: "$50.000" },
+];
 // ------------------------------------------------------------------
 
 async function sb(path, options = {}) {
@@ -234,8 +239,10 @@ function ClienteView({ clases, alumnoDemo, reload, error }) {
   );
 }
 
+const MAX_CAMAS_REFORMER = 3; // el estudio tiene 3 camas de reformer
+
 function NuevaClaseForm({ onClose, onCreated, token }) {
-  const [form, setForm] = useState({ nombre: "", instructor: "", fecha: "", hora: "", cupos_totales: 8 });
+  const [form, setForm] = useState({ nombre: "", instructor: "", fecha: "", hora: "", cupos_totales: MAX_CAMAS_REFORMER });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -244,6 +251,10 @@ function NuevaClaseForm({ onClose, onCreated, token }) {
   const submit = async () => {
     if (!form.nombre || !form.fecha || !form.hora) {
       setErr("Completá nombre, fecha y hora.");
+      return;
+    }
+    if (Number(form.cupos_totales) > MAX_CAMAS_REFORMER) {
+      setErr(`El estudio tiene ${MAX_CAMAS_REFORMER} camas de reformer — no se pueden cargar más cupos que eso.`);
       return;
     }
     setBusy(true);
@@ -272,7 +283,8 @@ function NuevaClaseForm({ onClose, onCreated, token }) {
           <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
           <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
         </div>
-        <input type="number" min="1" placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 14 }} />
+        <input type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
+        <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>Máximo {MAX_CAMAS_REFORMER} camas disponibles en el estudio.</p>
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
         <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
           {busy ? "Creando..." : "Crear clase"}
@@ -444,6 +456,29 @@ function Landing({ onEnter }) {
             <p style={{ fontSize: 14, color: "#C9C2B4", lineHeight: 1.6, margin: 0 }}>{desc}</p>
           </div>
         ))}
+      </div>
+
+      <div style={{ maxWidth: 880, margin: "0 auto 70px", padding: "0 24px" }}>
+        <h2 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 26, margin: "0 0 22px", color: "#F2EEE4", textAlign: "center" }}>Planes</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18 }}>
+          {PLANES.map((p, i) => (
+            <div
+              key={p.veces}
+              style={{
+                background: i === 1 ? `linear-gradient(160deg, ${MOSS_LIGHT}, ${MOSS_DARK})` : "#ffffff0d",
+                border: i === 1 ? "none" : "1px solid #ffffff1a",
+                borderRadius: 20,
+                padding: "28px 24px",
+                textAlign: "center",
+                boxShadow: i === 1 ? SHADOW_MD : "none",
+              }}
+            >
+              <p style={{ fontSize: 13, fontWeight: 600, color: i === 1 ? "#E7EFE6" : "#C9C2B4", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: 0.5 }}>{p.veces}</p>
+              <p style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: i === 1 ? STONE : "#F2EEE4", margin: 0 }}>{p.precio}</p>
+              <p style={{ fontSize: 12, color: i === 1 ? "#DCE5DA" : MUTE, margin: "6px 0 0" }}>por mes</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ maxWidth: 880, margin: "0 auto 70px", padding: "0 24px" }}>

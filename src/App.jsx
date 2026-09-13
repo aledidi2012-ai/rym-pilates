@@ -1304,6 +1304,104 @@ function EditarInstructoraForm({ instructora, onClose, onSaved, token }) {
   );
 }
 
+const DIA_NOMBRE_LARGO = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+function HorarioFijoForm({ alumno, clases, onClose, onDone }) {
+  const [seleccion, setSeleccion] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [resultado, setResultado] = useState(null);
+
+  const hoy = formatFechaCal(new Date());
+  const futuras = (clases || []).filter((c) => c.fecha >= hoy);
+
+  const comboMap = new Map();
+  futuras.forEach((c) => {
+    const dia = new Date(`${c.fecha}T00:00:00`).getDay();
+    const key = `${c.nombre}|${c.hora}|${dia}`;
+    if (!comboMap.has(key)) comboMap.set(key, { key, nombre: c.nombre, hora: c.hora, dia });
+  });
+  const combos = Array.from(comboMap.values()).sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora));
+
+  const toggle = (key) => {
+    setSeleccion((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
+
+  const asignar = async () => {
+    if (seleccion.length === 0) {
+      setErr("Elegí al menos un horario fijo.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    setResultado(null);
+    let creadas = 0;
+    let saltadas = 0;
+    const contadorCupos = {};
+    try {
+      for (const c of futuras) {
+        const dia = new Date(`${c.fecha}T00:00:00`).getDay();
+        const key = `${c.nombre}|${c.hora}|${dia}`;
+        if (!seleccion.includes(key)) continue;
+        const ocupadosActuales = contadorCupos[c.id] ?? c.cupos_ocupados;
+        if (ocupadosActuales >= c.cupos_totales) {
+          saltadas++;
+          continue;
+        }
+        try {
+          await sb("reservas", { method: "POST", body: JSON.stringify({ alumno_id: alumno.id, clase_id: c.id }) });
+          contadorCupos[c.id] = ocupadosActuales + 1;
+          creadas++;
+        } catch (e) {
+          saltadas++;
+        }
+      }
+      setResultado(`Se reservaron ${creadas} clases.${saltadas > 0 ? ` ${saltadas} no se pudieron (llenas o ya reservadas antes).` : ""}`);
+      await onDone();
+    } catch (e) {
+      setErr(`No se pudo completar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px 0", overflowY: "auto" }}>
+      <div style={{ background: STONE, width: 380, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Horario fijo</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <p style={{ fontSize: 13, color: MUTE, margin: "0 0 16px" }}>
+          {alumno.nombre} · elegí los días y horarios fijos de sus clases (uno por cada vez que va a la semana). Se va a reservar automáticamente en todas las próximas clases que coincidan.
+        </p>
+
+        {combos.length === 0 ? (
+          <p style={{ fontSize: 13, color: MUTE, marginBottom: 14 }}>Todavía no hay clases futuras cargadas para elegir. Primero armá las clases recurrentes desde "Nueva clase".</p>
+        ) : (
+          <div style={{ maxHeight: 220, overflowY: "auto", border: `1.5px solid ${MUTE}33`, borderRadius: 12, padding: 8, marginBottom: 14 }}>
+            {combos.map((combo) => (
+              <label key={combo.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 4px", fontSize: 13, color: INK, cursor: "pointer" }}>
+                <input type="checkbox" checked={seleccion.includes(combo.key)} onChange={() => toggle(combo.key)} />
+                {DIA_NOMBRE_LARGO[combo.dia]} {combo.hora?.slice(0, 5)} · {combo.nombre}
+              </label>
+            ))}
+          </div>
+        )}
+
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+        {resultado && <p style={{ color: MOSS_DARK, fontSize: 12.5, margin: "0 0 10px" }}>{resultado}</p>}
+        <button
+          onClick={asignar}
+          disabled={busy || combos.length === 0}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}
+        >
+          {busy ? "Reservando..." : "Fijar y reservar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminView({ clases, alumnos, instructores, reload, token }) {
   const [tab, setTab] = useState("clases");
   const [showForm, setShowForm] = useState(false);
@@ -1313,6 +1411,7 @@ function AdminView({ clases, alumnos, instructores, reload, token }) {
   const [editarClase, setEditarClase] = useState(null);
   const [editarAlumno, setEditarAlumno] = useState(null);
   const [editarInstructora, setEditarInstructora] = useState(null);
+  const [horarioFijoAlumno, setHorarioFijoAlumno] = useState(null);
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
@@ -1404,6 +1503,15 @@ function AdminView({ clases, alumnos, instructores, reload, token }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  setHorarioFijoAlumno(a);
+                }}
+                style={{ background: "none", border: `1.5px solid ${MOSS}55`, borderRadius: 20, padding: "6px 12px", color: MOSS_DARK, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, flexShrink: 0 }}
+              >
+                Horario fijo
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
                   setAccesoAlumno(a);
                 }}
                 style={{ background: "none", border: `1.5px solid ${INK}22`, borderRadius: 20, padding: "6px 12px", color: INK, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, flexShrink: 0 }}
@@ -1441,6 +1549,7 @@ function AdminView({ clases, alumnos, instructores, reload, token }) {
       {editarClase && <EditarClaseForm clase={editarClase} onClose={() => setEditarClase(null)} onSaved={reload} token={token} />}
       {editarAlumno && <EditarAlumnoForm alumno={editarAlumno} onClose={() => setEditarAlumno(null)} onSaved={reload} token={token} />}
       {editarInstructora && <EditarInstructoraForm instructora={editarInstructora} onClose={() => setEditarInstructora(null)} onSaved={reload} token={token} />}
+      {horarioFijoAlumno && <HorarioFijoForm alumno={horarioFijoAlumno} clases={clases} onClose={() => setHorarioFijoAlumno(null)} onDone={reload} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Calendar, Users, LayoutGrid, ChevronLeft, Plus, X, Check, Instagram, MessageCircle, MapPin, ArrowRight, LogOut } from "lucide-react";
+import { Calendar, Users, LayoutGrid, ChevronLeft, Plus, X, Check, Instagram, MessageCircle, MapPin, ArrowRight, LogOut, Clock } from "lucide-react";
 
 const SUPABASE_URL = "https://hkcbwsrsemppvyidwhlt.supabase.co";
 const SUPABASE_KEY = "sb_publishable_RRAMcqXuHdFstAgi_LKaMQ_FAF9uFMc";
@@ -23,6 +23,10 @@ const FONT_BODY = "'Manrope', -apple-system, Helvetica, Arial, sans-serif";
 
 // ---- DATOS DEL ESTUDIO: editá estas líneas cuando quieras ----
 const STUDIO_ADDRESS = "Belgrano 10, Bernal";
+const STUDIO_HOURS = [
+  { dias: "Lunes a viernes", horario: "8:00 a 21:00 hs" },
+  { dias: "Sábados", horario: "9:00 a 13:00 hs" },
+];
 const STUDIO_WHATSAPP = "https://wa.me/5491161626800";
 const STUDIO_INSTAGRAM = "https://instagram.com/rympilates";
 const ADMIN_EMAIL = "aledidi2012@gmail.com";
@@ -131,10 +135,58 @@ function Header({ session, isAdmin, mode, setMode, onLogout, onShowLogin, onGoHo
   );
 }
 
+function MiPerfil({ alumno, session, reload }) {
+  const [notas, setNotas] = useState(alumno.notas_salud || "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState(false);
+
+  const guardar = async () => {
+    setBusy(true);
+    setErr("");
+    setOk(false);
+    try {
+      await sb(`alumnos?id=eq.${alumno.id}`, { method: "PATCH", token: session.token, body: JSON.stringify({ notas_salud: notas || null }) });
+      await reload();
+      setOk(true);
+    } catch (e) {
+      setErr(`No se pudo guardar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div>
+      <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: INK, margin: "0 0 8px", letterSpacing: -0.5 }}>Mi perfil</h1>
+      <p style={{ fontSize: 14, color: MUTE, margin: "0 0 24px" }}>{alumno.nombre} · {alumno.paquete || "sin paquete"} · {alumno.clases_restantes ?? "—"} clases restantes</p>
+
+      <div style={{ background: STONE, borderRadius: 18, boxShadow: SHADOW_SM, padding: 22, maxWidth: 480 }}>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 18, margin: "0 0 8px", color: INK }}>Lesiones y salud</h3>
+        <p style={{ fontSize: 12.5, color: MUTE, margin: "0 0 12px" }}>
+          Contale al estudio si tenés alguna lesión, contraindicación, embarazo o cirugía reciente — así la clase se adapta a vos.
+        </p>
+        <textarea
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+          rows={4}
+          placeholder="Ej: dolor lumbar crónico, cirugía de rodilla en 2024..."
+          style={{ width: "100%", padding: 12, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK, resize: "vertical", marginBottom: 10 }}
+        />
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 8px" }}>{err}</p>}
+        {ok && <p style={{ color: MOSS_DARK, fontSize: 12.5, margin: "0 0 8px" }}>Guardado.</p>}
+        <button onClick={guardar} disabled={busy} style={{ padding: "11px 20px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+          {busy ? "Guardando..." : "Guardar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeedLogin, onGoHome, reload, error }) {
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [accionError, setAccionError] = useState("");
+  const [tab, setTab] = useState("clases");
 
   useEffect(() => {
     if (selected && clases) {
@@ -216,6 +268,21 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
       <p style={{ fontSize: 14, color: MUTE, margin: "0 0 2px", fontWeight: 500 }}>
         {alumnoActual ? `Hola, ${alumnoActual.nombre.split(" ")[0]}` : "Hola"}
       </p>
+
+      {alumnoActual && (
+        <div style={{ display: "flex", gap: 4, background: STONE, padding: 4, borderRadius: 14, width: "fit-content", marginBottom: 20, marginTop: 10 }}>
+          {[["clases", "Clases"], ["perfil", "Mi perfil"]].map(([key, label]) => (
+            <button key={key} onClick={() => setTab(key)} style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: tab === key ? MOSS_DARK : "transparent", color: tab === key ? STONE : MUTE, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {alumnoActual && tab === "perfil" ? (
+        <MiPerfil alumno={alumnoActual} session={session} reload={reload} />
+      ) : (
+        <>
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 500, color: INK, margin: "0 0 28px", letterSpacing: -0.5 }}>Clases disponibles</h1>
 
       <ErrorBanner msg={error} />
@@ -284,59 +351,154 @@ function ClienteView({ clases, alumnoActual, session, isAdmin, onGoAdmin, onNeed
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 }
 
 const MAX_CAMAS_REFORMER = 3; // el estudio tiene 3 camas de reformer
 
+const DIAS_SEMANA = [
+  { valor: 1, nombre: "Lunes" },
+  { valor: 2, nombre: "Martes" },
+  { valor: 3, nombre: "Miércoles" },
+  { valor: 4, nombre: "Jueves" },
+  { valor: 5, nombre: "Viernes" },
+  { valor: 6, nombre: "Sábado" },
+];
+
+function rangoHorarioPermitido(diaSemana) {
+  // diaSemana: 0=domingo ... 6=sábado (Date.getDay())
+  if (diaSemana === 0) return null; // cerrado los domingos
+  if (diaSemana === 6) return { desde: "09:00", hasta: "13:00" };
+  return { desde: "08:00", hasta: "21:00" };
+}
+
+function formatFecha(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function proximasFechas(diaSemana, cantidad) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  while (d.getDay() !== diaSemana) d.setDate(d.getDate() + 1);
+  const fechas = [];
+  for (let i = 0; i < cantidad; i++) {
+    fechas.push(formatFecha(d));
+    d.setDate(d.getDate() + 7);
+  }
+  return fechas;
+}
+
 function NuevaClaseForm({ onClose, onCreated, token }) {
   const [form, setForm] = useState({ nombre: "", instructor: "", fecha: "", hora: "", cupos_totales: MAX_CAMAS_REFORMER });
+  const [recurrente, setRecurrente] = useState(false);
+  const [diaSemana, setDiaSemana] = useState(1);
+  const [semanas, setSemanas] = useState(8);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
 
   const submit = async () => {
-    if (!form.nombre || !form.fecha || !form.hora) {
-      setErr("Completá nombre, fecha y hora.");
+    if (!form.nombre || !form.hora) {
+      setErr("Completá nombre y hora.");
+      return;
+    }
+    if (!recurrente && !form.fecha) {
+      setErr("Completá la fecha.");
       return;
     }
     if (Number(form.cupos_totales) > MAX_CAMAS_REFORMER) {
       setErr(`El estudio tiene ${MAX_CAMAS_REFORMER} camas de reformer — no se pueden cargar más cupos que eso.`);
       return;
     }
+
+    const diaParaValidar = recurrente ? diaSemana : new Date(`${form.fecha}T00:00:00`).getDay();
+    const rango = rangoHorarioPermitido(diaParaValidar);
+    if (!rango) {
+      setErr("El estudio no abre los domingos.");
+      return;
+    }
+    if (form.hora < rango.desde || form.hora > rango.hasta) {
+      setErr(`Ese día el estudio atiende de ${rango.desde} a ${rango.hasta} hs.`);
+      return;
+    }
+
     setBusy(true);
     setErr("");
     try {
-      await sb("clases", { method: "POST", token, body: JSON.stringify({ ...form, cupos_totales: Number(form.cupos_totales), cupos_ocupados: 0 }) });
+      if (recurrente) {
+        const fechas = proximasFechas(diaSemana, Number(semanas));
+        const filas = fechas.map((fecha) => ({
+          nombre: form.nombre,
+          instructor: form.instructor,
+          fecha,
+          hora: form.hora,
+          cupos_totales: Number(form.cupos_totales),
+          cupos_ocupados: 0,
+        }));
+        await sb("clases", { method: "POST", token, body: JSON.stringify(filas) });
+      } else {
+        await sb("clases", { method: "POST", token, body: JSON.stringify({ ...form, cupos_totales: Number(form.cupos_totales), cupos_ocupados: 0 }) });
+      }
       onCreated();
       onClose();
     } catch (e) {
-      setErr("No se pudo crear. Revisá los permisos (RLS) de la tabla clases.");
+      setErr(`No se pudo crear: ${e.message}`);
     }
     setBusy(false);
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 40 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 40, overflowY: "auto", padding: "24px 0" }}>
       <div style={{ background: STONE, width: 380, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 20, margin: 0, color: INK }}>Nueva clase</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
         </div>
+
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: INK, marginBottom: 14, cursor: "pointer" }}>
+          <input type="checkbox" checked={recurrente} onChange={(e) => setRecurrente(e.target.checked)} />
+          Se repite todas las semanas
+        </label>
+
         {["nombre", "instructor"].map((f) => (
           <input key={f} placeholder={f === "nombre" ? "Nombre (ej. Reformer Nivel 1)" : "Instructor"} value={form[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })} style={inputStyle} />
         ))}
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
-          <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
-        </div>
+
+        {recurrente ? (
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <select value={diaSemana} onChange={(e) => setDiaSemana(Number(e.target.value))} style={{ ...inputStyle, flex: 1, marginBottom: 0 }}>
+              {DIAS_SEMANA.map((d) => (
+                <option key={d.valor} value={d.valor}>{d.nombre}</option>
+              ))}
+            </select>
+            <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+            <input type="time" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+          </div>
+        )}
+
+        {recurrente && (
+          <>
+            <input type="number" min="1" max="26" value={semanas} onChange={(e) => setSemanas(e.target.value)} style={{ ...inputStyle, marginBottom: 4 }} />
+            <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>Cantidad de semanas a generar (se crea una clase por cada {DIAS_SEMANA.find((d) => d.valor === diaSemana)?.nombre.toLowerCase()}).</p>
+          </>
+        )}
+
         <input type="number" min="1" max={MAX_CAMAS_REFORMER} placeholder="Cupos" value={form.cupos_totales} onChange={(e) => setForm({ ...form, cupos_totales: e.target.value })} style={{ ...inputStyle, marginBottom: 4 }} />
         <p style={{ fontSize: 11.5, color: MUTE, margin: "0 0 14px" }}>Máximo {MAX_CAMAS_REFORMER} camas disponibles en el estudio.</p>
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
         <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
-          {busy ? "Creando..." : "Crear clase"}
+          {busy ? "Creando..." : recurrente ? `Crear ${semanas} clases` : "Crear clase"}
         </button>
       </div>
     </div>
@@ -500,7 +662,7 @@ function DarAccesoForm({ alumno, onClose, onDone, token }) {
 }
 
 function NuevoAlumnoForm({ onClose, onCreated, token }) {
-  const [form, setForm] = useState({ nombre: "", paquete: "", clases_restantes: "" });
+  const [form, setForm] = useState({ nombre: "", paquete: "", clases_restantes: "", notas_salud: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -521,6 +683,7 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
           nombre: form.nombre,
           paquete: form.paquete || null,
           clases_restantes: form.clases_restantes === "" ? null : Number(form.clases_restantes),
+          notas_salud: form.notas_salud || null,
         }),
       });
       onCreated();
@@ -541,10 +704,69 @@ function NuevoAlumnoForm({ onClose, onCreated, token }) {
         <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
         <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
         <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
+        <textarea placeholder="Lesiones, contraindicaciones, embarazo, cirugías (opcional)" value={form.notas_salud} onChange={(e) => setForm({ ...form, notas_salud: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
         <p style={{ fontSize: 11.5, color: MUTE, margin: "-4px 0 14px" }}>Después podés darle acceso a la app desde el botón "Dar acceso" en su fila.</p>
         {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
         <button onClick={submit} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
           {busy ? "Creando..." : "Crear alumno"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EditarAlumnoForm({ alumno, onClose, onSaved, token }) {
+  const [form, setForm] = useState({
+    nombre: alumno.nombre || "",
+    paquete: alumno.paquete || "",
+    clases_restantes: alumno.clases_restantes ?? "",
+    notas_salud: alumno.notas_salud || "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const inputStyle = { width: "100%", padding: 12, marginBottom: 10, borderRadius: 12, border: `1.5px solid ${MUTE}33`, background: BG, fontSize: 14, boxSizing: "border-box", fontFamily: FONT_BODY, color: INK };
+
+  const guardar = async () => {
+    if (!form.nombre) {
+      setErr("El nombre no puede quedar vacío.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await sb(`alumnos?id=eq.${alumno.id}`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({
+          nombre: form.nombre,
+          paquete: form.paquete || null,
+          clases_restantes: form.clases_restantes === "" ? null : Number(form.clases_restantes),
+          notas_salud: form.notas_salud || null,
+        }),
+      });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setErr(`No se pudo guardar: ${e.message}`);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(28,27,25,0.5)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+      <div style={{ background: STONE, width: 340, maxWidth: "90vw", borderRadius: 22, padding: 24, boxShadow: SHADOW_LG, fontFamily: FONT_BODY }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 19, margin: 0, color: INK }}>Editar alumno</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={18} color={INK} /></button>
+        </div>
+        <input placeholder="Nombre completo" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
+        <input placeholder="Paquete (ej. 8 clases)" value={form.paquete} onChange={(e) => setForm({ ...form, paquete: e.target.value })} style={inputStyle} />
+        <input type="number" placeholder="Clases restantes" value={form.clases_restantes} onChange={(e) => setForm({ ...form, clases_restantes: e.target.value })} style={inputStyle} />
+        <textarea placeholder="Lesiones, contraindicaciones, embarazo, cirugías" value={form.notas_salud} onChange={(e) => setForm({ ...form, notas_salud: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+        {err && <p style={{ color: CLAY, fontSize: 12.5, margin: "0 0 10px" }}>{err}</p>}
+        <button onClick={guardar} disabled={busy} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${MOSS_LIGHT}, ${MOSS_DARK})`, color: STONE, fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: SHADOW_MD, fontFamily: FONT_BODY }}>
+          {busy ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
     </div>
@@ -557,6 +779,7 @@ function AdminView({ clases, alumnos, reload, token }) {
   const [showAlumnoForm, setShowAlumnoForm] = useState(false);
   const [accesoAlumno, setAccesoAlumno] = useState(null);
   const [editarClase, setEditarClase] = useState(null);
+  const [editarAlumno, setEditarAlumno] = useState(null);
 
   return (
     <div style={{ fontFamily: FONT_BODY }}>
@@ -609,17 +832,29 @@ function AdminView({ clases, alumnos, reload, token }) {
       ) : (
         <div style={{ background: STONE, borderRadius: 18, boxShadow: SHADOW_SM, overflow: "hidden" }}>
           {(alumnos || []).map((a, i) => (
-            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 20px", borderTop: i === 0 ? "none" : `1px solid ${MUTE}22` }}>
+            <div
+              key={a.id}
+              onClick={() => setEditarAlumno(a)}
+              style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 20px", borderTop: i === 0 ? "none" : `1px solid ${MUTE}22`, cursor: "pointer" }}
+            >
               <div style={{ width: 38, height: 38, borderRadius: 12, background: `linear-gradient(135deg, ${CLAY_LIGHT}, #fff)`, color: CLAY, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
                 {a.nombre.split(" ").map((n) => n[0]).slice(0, 2).join("")}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14.5, color: INK, fontWeight: 600 }}>{a.nombre}</div>
+                <div style={{ fontSize: 14.5, color: INK, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                  {a.nombre}
+                  {a.notas_salud && (
+                    <span title={a.notas_salud} style={{ fontSize: 10, color: CLAY, background: CLAY_LIGHT, padding: "2px 7px", borderRadius: 10, fontWeight: 700 }}>salud</span>
+                  )}
+                </div>
                 <div style={{ fontSize: 12.5, color: MUTE, marginTop: 2 }}>{a.paquete || "sin paquete"}{a.email ? ` · ${a.email}` : ""}</div>
               </div>
               <div style={{ fontSize: 13, color: MOSS_DARK, fontWeight: 700 }}>{a.clases_restantes ?? "—"}</div>
               <button
-                onClick={() => setAccesoAlumno(a)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAccesoAlumno(a);
+                }}
                 style={{ background: "none", border: `1.5px solid ${INK}22`, borderRadius: 20, padding: "6px 12px", color: INK, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY, flexShrink: 0 }}
               >
                 {a.email ? "Cambiar acceso" : "Dar acceso"}
@@ -633,6 +868,7 @@ function AdminView({ clases, alumnos, reload, token }) {
       {showAlumnoForm && <NuevoAlumnoForm onClose={() => setShowAlumnoForm(false)} onCreated={reload} token={token} />}
       {accesoAlumno && <DarAccesoForm alumno={accesoAlumno} onClose={() => setAccesoAlumno(null)} onDone={reload} token={token} />}
       {editarClase && <EditarClaseForm clase={editarClase} onClose={() => setEditarClase(null)} onSaved={reload} token={token} />}
+      {editarAlumno && <EditarAlumnoForm alumno={editarAlumno} onClose={() => setEditarAlumno(null)} onSaved={reload} token={token} />}
     </div>
   );
 }
@@ -829,9 +1065,18 @@ function Landing({ onEnter, onLogin }) {
         <div style={{ background: STONE, borderRadius: 28, boxShadow: SHADOW_LG, padding: "44px 36px", display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between" }}>
           <div style={{ maxWidth: 340 }}>
             <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px", color: INK }}>Dónde estamos</h3>
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", color: MUTE, fontSize: 14, lineHeight: 1.6 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", color: MUTE, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
               <MapPin size={17} color={CLAY} style={{ flexShrink: 0, marginTop: 2 }} />
               <span>{STUDIO_ADDRESS}</span>
+            </div>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontWeight: 500, fontSize: 22, margin: "0 0 12px", color: INK }}>Horarios</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {STUDIO_HOURS.map((h) => (
+                <div key={h.dias} style={{ display: "flex", gap: 8, alignItems: "flex-start", color: MUTE, fontSize: 14, lineHeight: 1.6 }}>
+                  <Clock size={17} color={CLAY} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>{h.dias}: {h.horario}</span>
+                </div>
+              ))}
             </div>
           </div>
           <div>
